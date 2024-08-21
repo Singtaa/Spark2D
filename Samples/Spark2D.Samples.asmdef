@@ -1,0 +1,16 @@
+{
+    "name": "Spark2D.Samples",
+    "rootNamespace": "Spark2D.Samples",
+    "references": [
+        "GUID:2b9665b0bf072424ea76d426af45bc9a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,12 @@
+{
+    "name": "com.singtaa.spark2d",
+    "version": "0.0.5",
+    "displayName": "Spark2D",
+    "description": "Spark2D is an open-source 2D visual effects library for Unity, aiming to provide comprehensive image processing operations, SDF functionalities, and a 2D particle system to fill the gap in accessible VFX tools for game developers using C# and Unity.",
+    "unity": "2022.3",
+    "documentationUrl": "https://spark2d.org/",
+    "dependencies": {
+        "com.unity.mathematics": "1.2.6",
+        "com.unity.burst": "1.8.4"
+    }
+}
