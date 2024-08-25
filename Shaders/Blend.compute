@@ -1,0 +1,85 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> result;
+Texture2D<float4> tex1; // The base texture
+Texture2D<float4> tex2; // The texture to be blended onto tex1
+SamplerState samplertex2;
+
+float2 tex2Position; // Position of tex2 in tex1's coordinate space (relative to center)
+float tex2Rotation; // Rotation angle in radians
+float2 tex2Scale; // Scaling factor for tex2
+int blendMode; // Blending mode selector
+
+float4 Blend_Normal(float4 base, float4 blend) {
+    return blend.a * blend + (1.0 - blend.a) * base;
+}
+
+float4 Blend_Overlay(float4 base, float4 blend) {
+    float4 result;
+    result.r = (base.r > 0.5) ? 1.0 - 2.0 * (1.0 - base.r) * (1.0 - blend.r) : 2.0 * base.r * blend.r;
+    result.g = (base.g > 0.5) ? 1.0 - 2.0 * (1.0 - base.g) * (1.0 - blend.g) : 2.0 * base.g * blend.g;
+    result.b = (base.b > 0.5) ? 1.0 - 2.0 * (1.0 - base.b) * (1.0 - blend.b) : 2.0 * base.b * blend.b;
+    result.a = base.a;
+    return blend.a * result + (1.0 - blend.a) * base;
+}
+
+float4 Blend_Multiply(float4 base, float4 blend) {
+    return blend.a * (base * blend) + (1.0 - blend.a) * base;
+}
+
+float4 Blend_Difference(float4 base, float4 blend) {
+    return blend.a * abs(base - blend) + (1.0 - blend.a) * base;
+}
+
+float4 ApplyBlend(float4 base, float4 blend, int blendMode) {
+    switch (blendMode) {
+    case 0: return Blend_Normal(base, blend);
+    case 1: return Blend_Overlay(base, blend);
+    case 2: return Blend_Multiply(base, blend);
+    case 3: return Blend_Difference(base, blend);
+    // Add more blending modes as needed
+    default: return base;
+    }
+}
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    int2 pixelCoord = id.xy;
+    uint tex1Width, tex1Height;
+    tex1.GetDimensions(tex1Width, tex1Height);
+    uint tex2Width, tex2Height;
+    tex2.GetDimensions(tex2Width, tex2Height);
+
+    // Center tex1's origin (0,0) to the middle of the texture
+    float2 centeredCoord = pixelCoord - float2(tex1Width / 2, tex1Height / 2);
+
+    // Calculate the inverse transformation for tex2 (position, rotation, scale) relative to its center
+    float2 invTex2Coord = (centeredCoord - tex2Position) / tex2Scale;
+    float sinR = sin(tex2Rotation);
+    float cosR = cos(tex2Rotation);
+    invTex2Coord = float2(
+        cosR * invTex2Coord.x + sinR * invTex2Coord.y,
+        -sinR * invTex2Coord.x + cosR * invTex2Coord.y
+    );
+
+    // Adjust for tex2's pivot being at its center
+    invTex2Coord += float2(tex2Width / 2, tex2Height / 2);
+
+    // Normalize to UV coordinates
+    float2 uv2 = invTex2Coord / float2(tex2Width, tex2Height);
+
+    // Prevent tex2 from tiling outside its bounds
+    if (uv2.x < 0 || uv2.x > 1 || uv2.y < 0 || uv2.y > 1) {
+        result[pixelCoord] = tex1[pixelCoord]; // Keep original tex1 color if outside bounds
+        return;
+    }
+
+    // Sample the pixel from tex2 using the transformed coordinates
+    float4 blendColor = tex2.SampleLevel(samplertex2, uv2, 0);
+
+    // Apply the selected blending mode
+    float4 finalColor = ApplyBlend(tex1[pixelCoord], blendColor, blendMode);
+
+    // Write the final color to the result texture
+    result[pixelCoord] = pow(finalColor, 0.454545);
+}
