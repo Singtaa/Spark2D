@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "onejs": [ "node_modules/onejs-core" ],
+            "onejs/*": [ "node_modules/onejs-core/*" ],
+            "preact": [ "node_modules/onejs-preact", "node_modules/preact" ],
+            "preact/*": [ "node_modules/onejs-preact/*", "node_modules/preact/*" ]
+        },
+        "target": "esnext",
+        "module": "esnext",
+        "lib": [ "esnext" ],
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "moduleResolution": "node",
+        "jsx": "react",
+        "jsxFactory": "h",
+        "jsxFragmentFactory": "Fragment",
+        "skipLibCheck": false,
+        "forceConsistentCasingInFileNames": true,
+        "declaration": true,
+        "types": [ "onejs-core" ]
+    },
+    "include": [ "src/**/*" ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "src/typings.d.ts"
+    ]
+}

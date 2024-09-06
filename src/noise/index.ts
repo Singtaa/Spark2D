@@ -1,0 +1,1 @@
+export { fbm } from './fbm'

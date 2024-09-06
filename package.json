@@ -1,0 +1,10 @@
+{
+    "name": "spark2d",
+    "description": "This is the JS part of Spark2D, a 2D visual effects library for Unity",
+    "version": "0.0.2",
+    "main": "./dist/index.js",
+    "types": "./src/typings.d.ts",
+    "dependencies": {
+        "onejs-core": "^0.3.18"
+    }
+}
