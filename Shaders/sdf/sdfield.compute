@@ -1,0 +1,93 @@
+#pragma kernel CSMain
+#include "sdfunctions.cginc"
+
+RWTexture2D<float> result;
+
+int shapeType;
+
+float2 pos;
+float rot;
+float2 scale;
+bool onion;
+float rounded;
+
+float f1;
+float f2;
+float f3;
+float f4;
+float f5;
+float f6;
+
+float2 verts[SDF_POLYGON_MAX_VERTICES];
+
+float distance(SHAPE_TYPE shapeType, float2 coord) {
+    switch (shapeType) {
+    case ShapeType_Circle: return sdCircle(coord, f1);
+    case ShapeType_RoundedBox: return sdRoundedBox(coord, float2(f1, f2), float4(f3, f4, f5, f6));
+    case ShapeType_Box: return sdBox(coord, float2(f1, f2));
+    case ShapeType_OrientedBox: return sdOrientedBox(coord, float2(f1, f2), float2(f3, f4), f5);
+    case ShapeType_Segment: return sdSegment(coord, float2(f1, f2), float2(f3, f4));
+    case ShapeType_Rhombus: return sdRhombus(coord, float2(f1, f2));
+    case ShapeType_Trapezoid: return sdTrapezoid(coord, f1, f2, f3);
+    case ShapeType_Parallelogram: return sdParallelogram(coord, f1, f2, f3);
+    case ShapeType_EquilateralTriangle: return sdEquilateralTriangle(coord, f1);
+    case ShapeType_TriangleIsosceles: return sdTriangleIsosceles(coord, float2(f1, f2));
+    case ShapeType_Triangle: return sdTriangle(coord, float2(f1, f2), float2(f3, f4), float2(f5, f6));
+    case ShapeType_UnevenCapsule: return sdUnevenCapsule(coord, f1, f2, f3);
+    case ShapeType_Pentagon: return sdPentagon(coord, f1);
+    case ShapeType_Hexagon: return sdHexagon(coord, f1);
+    case ShapeType_Octogon: return sdOctogon(coord, f1);
+    case ShapeType_Hexagram: return sdHexagram(coord, f1);
+    case ShapeType_Star5: return sdStar5(coord, f1, f2);
+    case ShapeType_Star: return sdStar(coord, f1, int(f2), f3);
+    case ShapeType_Pie: return sdPie(coord, float2(f1, f2), f3);
+    case ShapeType_CutDisk: return sdCutDisk(coord, f1, f2);
+    case ShapeType_Arc: return sdArc(coord, float2(f1, f2), f3, f4);
+    case ShapeType_Ring: return sdRing(coord, float2(f1, f2), f3, f4);
+    case ShapeType_Horseshoe: return sdHorseshoe(coord, float2(f1, f2), f3, float2(f4, f5));
+    case ShapeType_Vesica: return sdVesica(coord, f1, f2);
+    case ShapeType_OrientedVesica: return sdOrientedVesica(coord, float2(f1, f2), float2(f3, f4), f5);
+    case ShapeType_Moon: return sdMoon(coord, f1, f2, f3);
+    case ShapeType_RoundedCross: return sdRoundedCross(coord, f1);
+    case ShapeType_Egg: return sdEgg(coord, f1, f2);
+    case ShapeType_Heart: return sdHeart(coord);
+    case ShapeType_Cross: return sdCross(coord, float2(f1, f2), f3);
+    case ShapeType_RoundedX: return sdRoundedX(coord, f1, f2);
+    case ShapeType_Polygon: return sdPolygon(coord, verts, f1); // Needs testing on this one
+    case ShapeType_Ellipse: return sdEllipse(coord, float2(f1, f2));
+    case ShapeType_Parabola: return sdParabola(coord, f1);
+    case ShapeType_ParabolaSegment: return sdParabolaSegment(coord, f1, f2);
+    case ShapeType_Bezier: return sdBezier(coord, float2(f1, f2), float2(f3, f4), float2(f5, f6));
+    case ShapeType_BlobbyCross: return sdBlobbyCross(coord, f1);
+    case ShapeType_Tunnel: return sdTunnel(coord, float2(f1, f2));
+    case ShapeType_Stairs: return sdStairs(coord, float2(f1, f2), f3);
+    case ShapeType_QuadraticCircle: return sdQuadraticCircle(coord);
+    case ShapeType_Hyberbola: return sdHyberbola(coord, f1, f2);
+    case ShapeType_fCoolS: return sdfCoolS(coord);
+    case ShapeType_CircleWave: return sdCircleWave(coord, f1, f2);
+    default: return 0.0;
+    }
+}
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    int2 pixelCoord = id.xy;
+    uint texWidth, texHeight;
+    result.GetDimensions(texWidth, texHeight);
+
+    float2 origin = float2(texWidth / 2, texHeight / 2);
+    float2 coord = pixelCoord - origin;
+
+    // Apply scaling and rotation
+    coord = (coord - pos) / scale;
+    coord = float2(coord.x * cos(rot) - coord.y * sin(rot),
+                   coord.x * sin(rot) + coord.y * cos(rot));
+
+    float dist = distance(shapeType, coord);
+    if (onion)
+        dist = abs(dist);
+    dist = dist - rounded;
+
+    // Write the signed distance value to the result texture
+    result[pixelCoord] = dist;
+}

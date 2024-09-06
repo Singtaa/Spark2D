@@ -1,0 +1,18 @@
+{
+    "name": "Spark2D.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:2b9665b0bf072424ea76d426af45bc9a"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

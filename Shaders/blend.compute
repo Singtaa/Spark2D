@@ -5,6 +5,11 @@ Texture2D<float4> tex1; // The base texture
 Texture2D<float4> tex2; // The texture to be blended onto tex1
 SamplerState samplertex2;
 
+/**
+ * Remember, sampler is used to include filtering, wrapping, mipmapping, etc. Since tex1 is not being scaled or
+ * rotated, we don't need a sampler for it. However, tex2 is being transformed, so we need a sampler for it.
+ */
+
 float2 tex2Position; // Position of tex2 in tex1's coordinate space (relative to center)
 float tex2Rotation; // Rotation angle in radians
 float2 tex2Scale; // Scaling factor for tex2
@@ -12,6 +17,21 @@ int blendMode; // Blending mode selector
 
 float4 Blend_Normal(float4 base, float4 blend) {
     return blend.a * blend + (1.0 - blend.a) * base;
+}
+
+float4 Blend_Dissolve(float4 base, float4 blend, float2 pixelCoord, float threshold) {
+    float4 result;
+
+    // Generate a random value between 0 and 1 based on pixel coordinates
+    float randomValue = frac(sin(dot(pixelCoord.xy, float2(12.9898, 78.233))) * 43758.5453);
+
+    // Compare random value with threshold-modified blend alpha
+    result = (randomValue < blend.a * threshold) ? blend : base;
+
+    // Handle alpha channel (keep base alpha for now)
+    result.a = base.a;
+
+    return result;
 }
 
 float4 Blend_Overlay(float4 base, float4 blend) {
@@ -31,12 +51,13 @@ float4 Blend_Difference(float4 base, float4 blend) {
     return blend.a * abs(base - blend) + (1.0 - blend.a) * base;
 }
 
-float4 ApplyBlend(float4 base, float4 blend, int blendMode) {
+float4 ApplyBlend(float4 base, float4 blend, int blendMode, int2 pixelCoord) {
     switch (blendMode) {
     case 0: return Blend_Normal(base, blend);
-    case 1: return Blend_Overlay(base, blend);
-    case 2: return Blend_Multiply(base, blend);
-    case 3: return Blend_Difference(base, blend);
+    case 1: return Blend_Dissolve(base, blend,pixelCoord, 1);
+    case 2: return Blend_Overlay(base, blend);
+    case 3: return Blend_Multiply(base, blend);
+    case 4: return Blend_Difference(base, blend);
     // Add more blending modes as needed
     default: return base;
     }
@@ -78,7 +99,7 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
     float4 blendColor = tex2.SampleLevel(samplertex2, uv2, 0);
 
     // Apply the selected blending mode
-    float4 finalColor = ApplyBlend(tex1[pixelCoord], blendColor, blendMode);
+    float4 finalColor = ApplyBlend(tex1[pixelCoord], blendColor, blendMode, pixelCoord);
 
     // Write the final color to the result texture
     result[pixelCoord] = pow(finalColor, 0.454545);
