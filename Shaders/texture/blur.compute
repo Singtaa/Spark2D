@@ -1,0 +1,49 @@
+﻿#pragma kernel HorizontalBlur
+#pragma kernel VerticalBlur
+
+Texture2D<float4> input;
+RWTexture2D<float4> Result;
+SamplerState sampler_input;
+
+int BlurRadius;
+float BlurSigma;
+
+#define MAX_BLUR_RADIUS 32
+
+[numthreads(8, 8, 1)]
+void HorizontalBlur(uint3 id : SV_DispatchThreadID) {
+    float4 color = float4(0, 0, 0, 0);
+    float weightSum = 0;
+
+    uint width, height;
+    input.GetDimensions(width, height);
+    float2 uv = (id.xy + 0.5f) / float2(width, height);
+
+    for (int i = -BlurRadius; i <= BlurRadius; i++) {
+        float2 offset = float2(i, 0) / float2(width, height);
+        float weight = exp(-(i * i) / (2 * BlurSigma * BlurSigma));
+        color += input.SampleLevel(sampler_input, uv + offset, 0) * weight;
+        weightSum += weight;
+    }
+
+    Result[id.xy] = color / weightSum;
+}
+
+[numthreads(8, 8, 1)]
+void VerticalBlur(uint3 id : SV_DispatchThreadID) {
+    float4 color = float4(0, 0, 0, 0);
+    float weightSum = 0;
+
+    uint width, height;
+    input.GetDimensions(width, height);
+    float2 uv = (id.xy + 0.5f) / float2(width, height);
+
+    for (int i = -BlurRadius; i <= BlurRadius; i++) {
+        float2 offset = float2(0, i) / float2(width, height);
+        float weight = exp(-(i * i) / (2 * BlurSigma * BlurSigma));
+        color += input.SampleLevel(sampler_input, uv + offset, 0) * weight;
+        weightSum += weight;
+    }
+
+    Result[id.xy] = color / weightSum;
+}

@@ -1,0 +1,63 @@
+﻿#pragma kernel CSMain
+
+RWTexture2D<float4> result;
+Texture2D<float4> inputA;
+Texture2D<float4> inputB;
+float4 scalarA;
+float4 scalarB;
+int operation;
+
+#define OP_CLAMP 0
+#define OP_FRACTION 1
+#define OP_MAXIMUM 2
+#define OP_MINIMUM 3
+#define OP_ONE_MINUS 4
+#define OP_RANDOM_RANGE 5
+#define OP_REMAP 6
+#define OP_SATURATE 7
+
+// Hash function for random number generation
+float hash(float2 p) {
+    return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    float4 a = inputA[id.xy];
+    float4 b = inputB[id.xy];
+    float4 res = 0;
+
+    switch (operation) {
+    case OP_CLAMP:
+        res = clamp(a, scalarA, scalarB);
+        break;
+    case OP_FRACTION:
+        res = frac(a);
+        break;
+    case OP_MAXIMUM:
+        res = max(a, b);
+        break;
+    case OP_MINIMUM:
+        res = min(a, b);
+        break;
+    case OP_ONE_MINUS:
+        res = 1.0 - a;
+        break;
+    case OP_RANDOM_RANGE:
+        float4 rand = hash(float2(id.xy));
+        res = scalarA + (scalarB - scalarA) * rand;
+        break;
+    case OP_REMAP:
+        // Remap a from [scalarA.x, scalarA.y] to [scalarB.x, scalarB.y]
+        res = scalarB.x + (a - scalarA.x) * (scalarB.y - scalarB.x) / (scalarA.y - scalarA.x);
+        break;
+    case OP_SATURATE:
+        res = saturate(a);
+        break;
+    default:
+        res = a;
+        break;
+    }
+
+    result[id.xy] = res;
+}
