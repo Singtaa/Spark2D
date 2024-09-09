@@ -2,7 +2,7 @@
 
 Texture2D<float4> tex1;
 SamplerState samplertex1;
-RWTexture2D<float> result;
+RWTexture2D<float4> result;
 
 float2 offset; // In UV space
 float rotation;

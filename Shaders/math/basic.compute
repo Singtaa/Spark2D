@@ -1,12 +1,11 @@
 ﻿/**
  * Basic math operations
  */
-
 #pragma kernel CSMain
-RWTexture2D<float4> result;
-RWTexture2D<float4> inputA;
+
+RWTexture2D<float4> inputA; // Mutable
 Texture2D<float> inputB;
-float scalar;
+float4 scalars;
 int operation;
 
 #define OP_ADD 0
@@ -48,25 +47,25 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
         res = sqrt(a);
         break;
     case OP_SCALAR_ADD:
-        res = a + scalar;
+        res = a + scalars.x;
         break;
     case OP_SCALAR_SUBTRACT:
-        res = a - scalar;
+        res = a - scalars.x;
         break;
     case OP_SCALAR_MULTIPLY:
-        res = a * scalar;
+        res = a * scalars.x;
         break;
     case OP_SCALAR_DIVIDE:
-        res = a / scalar;
+        res = a / scalars.x;
         break;
     case OP_SCALAR_POW:
-        res = pow(abs(a), scalar);
+        res = pow(abs(a), scalars.x);
         break;
     case OP_SCALAR_SQRT:
-        res = sqrt(scalar);
+        res = sqrt(scalars.x);
         break;
     default: break;
     }
 
-    result[id.xy] = res;
+    inputA[id.xy] = res;
 }

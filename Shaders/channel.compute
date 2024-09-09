@@ -1,0 +1,31 @@
+﻿#pragma kernel CSMain
+
+RWTexture2D<float4> result;
+int operation;
+
+#define OP_SPREAD_R 0
+#define OP_SPREAD_G 1
+#define OP_SPREAD_B 2
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    float4 pixel = result[id.xy];
+    float4 res = float4(0, 0, 0, 1); // Default to black with full alpha
+
+    switch (operation) {
+    case OP_SPREAD_R:
+        res.rgb = pixel.rrr;
+        break;
+    case OP_SPREAD_G:
+        res.rgb = pixel.ggg;
+        break;
+    case OP_SPREAD_B:
+        res.rgb = pixel.bbb;
+        break;
+    default:
+        res = pixel; // Default to original pixel if operation is not recognized
+        break;
+    }
+
+    result[id.xy] = res;
+}

@@ -23,3 +23,7 @@ MonoBehaviour:
     name: fbm
   - obj: {fileID: 7200000, guid: 71b3e0b88adf4df293633ba4625195a5, type: 3}
     name: math:basic
+  - obj: {fileID: 7200000, guid: bf7139a3d37646b2a8b5a6881832d467, type: 3}
+    name: math:range
+  - obj: {fileID: 7200000, guid: 91099d81b0c34e01bbf39b3f69ba07ea, type: 3}
+    name: channel

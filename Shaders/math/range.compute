@@ -1,20 +1,23 @@
-﻿#pragma kernel CSMain
+﻿/**
+* Range math operations
+ */
+#pragma kernel CSMain
 
-RWTexture2D<float4> result;
-Texture2D<float4> inputA;
-Texture2D<float4> inputB;
-float4 scalarA;
-float4 scalarB;
+RWTexture2D<float4> inputA; // Mutable
+Texture2D<float> inputB;
+float4 scalars;
 int operation;
 
-#define OP_CLAMP 0
-#define OP_FRACTION 1
-#define OP_MAXIMUM 2
-#define OP_MINIMUM 3
-#define OP_ONE_MINUS 4
-#define OP_RANDOM_RANGE 5
-#define OP_REMAP 6
-#define OP_SATURATE 7
+#define OP_CLAMP 16
+#define OP_FRACTION 17
+#define OP_MAXIMUM 18
+#define OP_MINIMUM 19
+#define OP_ONE_MINUS 20
+#define OP_RANDOM_RANGE 21
+#define OP_REMAP 22
+#define OP_SATURATE 23
+// #define OP_SCALAR_MAXIMUM 24
+// #define OP_SCALAR_MINIMUM 5
 
 // Hash function for random number generation
 float hash(float2 p) {
@@ -25,11 +28,11 @@ float hash(float2 p) {
 void CSMain(uint3 id : SV_DispatchThreadID) {
     float4 a = inputA[id.xy];
     float4 b = inputB[id.xy];
-    float4 res = 0;
+    float4 res;
 
     switch (operation) {
     case OP_CLAMP:
-        res = clamp(a, scalarA, scalarB);
+        res = clamp(a, scalars.x, scalars.y);
         break;
     case OP_FRACTION:
         res = frac(a);
@@ -45,19 +48,25 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
         break;
     case OP_RANDOM_RANGE:
         float4 rand = hash(float2(id.xy));
-        res = scalarA + (scalarB - scalarA) * rand;
+        res = scalars.x + (scalars.y - scalars.x) * rand;
         break;
     case OP_REMAP:
-        // Remap a from [scalarA.x, scalarA.y] to [scalarB.x, scalarB.y]
-        res = scalarB.x + (a - scalarA.x) * (scalarB.y - scalarB.x) / (scalarA.y - scalarA.x);
+        // Remap a from [scalars.x, scalars.y] to [scalars.z, scalars.w]
+        res = scalars.z + (a - scalars.x) * (scalars.w - scalars.z) / (scalars.y - scalars.x);
         break;
     case OP_SATURATE:
         res = saturate(a);
         break;
+    // case OP_SCALAR_MAXIMUM:
+    //     res = max(a, scalarA);
+    //     break;
+    // case OP_SCALAR_MINIMUM:
+    //     res = min(a, scalarA);
+    //     break;
     default:
         res = a;
         break;
     }
 
-    result[id.xy] = res;
+    inputA[id.xy] = res;
 }
