@@ -1,0 +1,25 @@
+﻿#pragma kernel CSMain
+
+#ifdef SHADER_API_MOBILE
+RWTexture2D<half4> inputA;
+#else
+RWTexture2D<float4> inputA;
+#endif
+
+int colorsLength;
+StructuredBuffer<float4> colors;
+StructuredBuffer<float> positions;
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    float4 a = inputA[id.xy];
+    for (int i = 1; i < colorsLength; i++) {
+        if (a.r >= positions[i -1] && a.r <= positions[i]) {
+            float t = (a.r - positions[i - 1]) / (positions[i] - positions[i - 1]);
+            a.rgba = lerp(colors[i - 1].rgba, colors[i].rgba, t);
+            break;
+        }
+    }
+
+    inputA[id.xy] = a;
+}

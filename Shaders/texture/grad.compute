@@ -1,0 +1,44 @@
+﻿#pragma kernel CSMain
+
+#ifdef SHADER_API_MOBILE
+RWTexture2D<half4> inputA;
+#else
+RWTexture2D<float4> inputA;
+#endif
+
+int colorsLength;
+StructuredBuffer<float4> colors;
+StructuredBuffer<float> positions;
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    // Get the texture dimensions
+    uint width, height;
+    inputA.GetDimensions(width, height);
+
+    // Normalize the x-coordinate between 0 and 1
+    float x_normalized = (float)id.x / (float)(width - 1);
+
+    float4 color = float4(0, 0, 0, 1); // Default color
+
+    // Handle edge cases where x_normalized is outside the positions range
+    if (x_normalized <= positions[0]) {
+        color = colors[0];
+    } else if (x_normalized >= positions[colorsLength - 1]) {
+        color = colors[colorsLength - 1];
+    } else {
+        // Find the segment in which x_normalized falls
+        for (int i = 0; i < colorsLength - 1; i++) {
+            if (x_normalized >= positions[i] && x_normalized <= positions[i + 1]) {
+                // Calculate interpolation factor
+                float t = (x_normalized - positions[i]) / (positions[i + 1] - positions[i]);
+                // Interpolate between the two colors
+                color = lerp(colors[i], colors[i + 1], t);
+                break;
+            }
+        }
+    }
+
+    // Write the calculated color to the texture
+    inputA[id.xy] = color;
+}

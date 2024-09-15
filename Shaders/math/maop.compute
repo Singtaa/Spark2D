@@ -1,0 +1,161 @@
+﻿#pragma kernel CSMain
+
+#ifdef SHADER_API_MOBILE
+RWTexture2D<half4> inputA;
+Texture2D<half4> inputB;
+#else
+RWTexture2D<float4> inputA; // Mutable
+Texture2D<float4> inputB;
+#endif
+SamplerState sampler_inputB;
+
+float4 scalars;
+int operation;
+int mode;
+
+int4 routes = {0, 1, 2, 4}; // 0: r, 1: g, 2: b, 3: a, 4: ignored
+
+// Basic
+#define OP_ADD 0
+#define OP_SUBTRACT 1
+#define OP_MULTIPLY 2
+#define OP_DIVIDE 3
+#define OP_POW 4
+#define OP_SQRT 5
+
+// Range
+#define OP_CLAMP 16
+#define OP_FRACTION 17
+#define OP_MAXIMUM 18
+#define OP_MINIMUM 19
+#define OP_ONE_MINUS 20
+#define OP_RANDOM_RANGE 21
+#define OP_REMAP 22
+#define OP_SATURATE 23
+
+// Advanced
+#define OP_ABSOLUTE 32
+#define OP_EXPONENTIAL 33
+#define OP_LENGTH 34
+#define OP_LOG 35
+#define OP_MODULO 36
+#define OP_NEGATE 37
+#define OP_NORMALIZE 38
+#define OP_POSTERIZE 39
+#define OP_RECIPROCAL 40
+#define OP_RECIPROCAL_SQRT 41
+
+#define MODE_TEXTURE 0
+#define MODE_VECTOR 1
+#define MODE_SCALAR 2
+
+// Hash function for random number generation
+float hash(float2 p) {
+    return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    float4 res = 0;
+    float4 a = inputA[id.xy];
+    float4 b;
+    if (mode == MODE_TEXTURE) {
+        b = inputB[id.xy];
+        float r[4] = {b.x, b.y, b.z, b.w};
+        b = float4(r[routes.x], r[routes.y], r[routes.z], r[routes.w]);
+    } else if (mode == MODE_VECTOR) {
+        float s[4] = {scalars.x, scalars.y, scalars.z, scalars.w};
+        b = float4(s[routes.x], s[routes.y], s[routes.z], s[routes.w]);
+    } else if (mode == MODE_SCALAR) {
+        b = float4(scalars.x, scalars.x, scalars.x, 1);
+    }
+
+    switch (operation) {
+    // Basic
+    case OP_ADD:
+        res = a + b;
+        break;
+    case OP_SUBTRACT:
+        res = a - b;
+        break;
+    case OP_MULTIPLY:
+        res = a * b;
+        break;
+    case OP_DIVIDE:
+        res = a / b;
+        break;
+    case OP_POW:
+        // pow(abs(a), b)
+        res = pow(abs(a), b);
+        break;
+    case OP_SQRT:
+        res = sqrt(a);
+        break;
+    // Range
+    case OP_CLAMP:
+        res = clamp(a, scalars.x, scalars.y);
+        break;
+    case OP_FRACTION:
+        res = frac(a);
+        break;
+    case OP_MAXIMUM:
+        res = max(a, b);
+        break;
+    case OP_MINIMUM:
+        res = min(a, b);
+        break;
+    case OP_ONE_MINUS:
+        res = 1.0 - a;
+        break;
+    case OP_RANDOM_RANGE:
+        float4 rand = hash(float2(id.xy));
+        res = scalars.x + (scalars.y - scalars.x) * rand;
+        break;
+    case OP_REMAP:
+        // Remap a from [scalars.x, scalars.y] to [scalars.z, scalars.w]
+        res = scalars.z + (a - scalars.x) * (scalars.w - scalars.z) / (scalars.y - scalars.x);
+        break;
+    case OP_SATURATE:
+        res = saturate(a);
+        break;
+    // Advanced
+    case OP_ABSOLUTE:
+        res = abs(a);
+        break;
+    case OP_EXPONENTIAL:
+        res = exp(a);
+        break;
+    case OP_LENGTH:
+        res = length(a);
+        break;
+    case OP_LOG:
+        res = log(a);
+        break;
+    case OP_MODULO:
+        res = fmod(a, b);
+        break;
+    case OP_NEGATE:
+        res = -a;
+        break;
+    case OP_NORMALIZE:
+        res = normalize(a);
+        break;
+    case OP_POSTERIZE:
+        // Posterize: floor(a / b) * b
+        res = floor(a / (1 / b)) * (1 / b);
+        res = floor(a / b) * b;
+        break;
+    case OP_RECIPROCAL:
+        res = 1.0 / a;
+        break;
+    case OP_RECIPROCAL_SQRT:
+        res = rsqrt(a);
+        break;
+    default: break;
+    }
+
+    inputA[id.xy] = float4(routes.x == 4 ? a.x : res.x,
+                           routes.y == 4 ? a.y : res.y,
+                           routes.z == 4 ? a.z : res.z,
+                           routes.w == 4 ? a.w : res.w);
+}

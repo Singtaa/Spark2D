@@ -1,8 +1,13 @@
 ﻿#pragma kernel CSMain
 
+#ifdef SHADER_API_MOBILE
+Texture2D<half4> tex1;
+RWTexture2D<half4> result;
+#else
 Texture2D<float4> tex1;
-SamplerState samplertex1;
 RWTexture2D<float4> result;
+#endif
+SamplerState samplertex1;
 
 float2 offset; // In UV space
 float rotation;

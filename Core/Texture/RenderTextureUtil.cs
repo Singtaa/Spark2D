@@ -1,10 +1,12 @@
-﻿using UnityEngine;
+﻿using System.Runtime.InteropServices;
+using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 namespace Spark2D {
     /// <summary>
     /// Made this helper class in C# primarily to work around this problem:
     /// https://github.com/Tencent/puerts/issues/1821
-    /// Initializing a RenderTexture in Puerts/JS causes crashes in Unity Editor.
+    /// Initializing a RenderTexture in Puerts/JS crashes Unity Editor.
     /// </summary>
     public class RenderTextureUtil {
         /// <summary>
@@ -17,6 +19,18 @@ namespace Spark2D {
 
         public static RenderTexture CreateRFloatRT(int width, int height) {
             var rt = new RenderTexture(width, height, 0, RenderTextureFormat.RFloat);
+            rt.enableRandomWrite = true;
+            rt.Create();
+            return rt;
+        }
+
+        public static RenderTexture CreateRT(int width, int height) {
+            return CreateRT(width, height, Application.isMobilePlatform ? RenderTextureFormat.ARGBHalf : RenderTextureFormat.ARGBFloat);
+        }
+
+        public static RenderTexture CreateRT(int width, int height, RenderTextureFormat format) {
+            var rt = new RenderTexture(width, height, 0, format);
+            rt.depthStencilFormat = GraphicsFormat.None;
             rt.enableRandomWrite = true;
             rt.Create();
             return rt;

@@ -1,7 +1,11 @@
 #pragma kernel CSMain
 #include "sdfunctions.cginc"
 
-RWTexture2D<float> result;
+#ifdef SHADER_API_MOBILE
+RWTexture2D<half4> result;
+#else
+RWTexture2D<float4> result;
+#endif
 
 int shapeType;
 
@@ -89,5 +93,5 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
     dist = dist - rounded;
 
     // Write the signed distance value to the result texture
-    result[pixelCoord] = dist;
+    result[pixelCoord] = float4(dist, dist, dist, 1);
 }
