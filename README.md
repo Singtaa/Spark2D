@@ -1,4 +1,4 @@
-https://github.com/user-attachments/assets/0256edc4-d4bb-428e-9ea5-0a2a11cfe1fc
+https://github.com/user-attachments/assets/851eb853-699b-4f65-9ae3-d7837f000c68
  
 WIP. Under Active development. Follow [@Singtaa](https://x.com/Singtaa) for updates.
 
