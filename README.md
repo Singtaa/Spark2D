@@ -1,4 +1,6 @@
-﻿WIP. Under Active development. Follow [@Singtaa](https://x.com/Singtaa) for updates.
+https://github.com/user-attachments/assets/0256edc4-d4bb-428e-9ea5-0a2a11cfe1fc
+ 
+WIP. Under Active development. Follow [@Singtaa](https://x.com/Singtaa) for updates.
 
 The [OneJS](https://onejs.com) bindings are available at https://github.com/Singtaa/onejs-spark2d. Currently, the library contains the following compute shaders:
 
