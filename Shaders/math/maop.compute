@@ -56,11 +56,14 @@ float hash(float2 p) {
 
 [numthreads(8,8,1)]
 void CSMain(uint3 id : SV_DispatchThreadID) {
+    uint width, height;
+    inputA.GetDimensions(width, height);
     float4 res = 0;
     float4 a = inputA[id.xy];
     float4 b;
     if (mode == MODE_TEXTURE) {
-        b = inputB[id.xy];
+        float2 uv = float2(id.x / (float)width, id.y / (float)height);
+        b = inputB.SampleLevel(sampler_inputB, uv, 0);
         float r[4] = {b.x, b.y, b.z, b.w};
         b = float4(r[routes.x], r[routes.y], r[routes.z], r[routes.w]);
     } else if (mode == MODE_VECTOR) {

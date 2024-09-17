@@ -46,7 +46,7 @@
 #define ShapeType_Stairs 38
 #define ShapeType_QuadraticCircle 39
 #define ShapeType_Hyberbola 40
-#define ShapeType_fCoolS 41
+#define ShapeType_CoolS 41
 #define ShapeType_CircleWave 42
 
 #define SHAPE_TYPE int
@@ -295,8 +295,8 @@ float sdRoundedCross(float2 p, float h) {
     float k = 0.5 * (h + 1.0 / h);
     p = abs(p);
     return (p.x < 1.0 && p.y < p.x * (k - h) + h)
-               ? k - sqrt(dot(p - float2(1, k), p - float2(1, k)))
-               : sqrt(min(dot(p - float2(0, h), p - float2(0, h)), dot(p - float2(1, 0), p - float2(1, 0))));
+               ? k - sqrt(dot2(p - float2(1, k)))
+               : sqrt(min(dot2(p - float2(0, h)), dot2(p - float2(1, 0))));
 }
 
 float sdEgg(float2 p, float ra, float rb) {
@@ -537,7 +537,7 @@ float sdHyberbola(float2 p, float k, float he) {
     return length(p - float2(t, k / t)) * sign(p.x * p.y < k ? 1.0 : -1.0);
 }
 
-float sdfCoolS(float2 p) {
+float sdCoolS(float2 p) {
     float six = (p.y < 0.0) ? -p.x : p.x;
     p.x = abs(p.x);
     p.y = abs(p.y) - 0.2;

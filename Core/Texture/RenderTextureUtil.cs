@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.UIElements;
 
 namespace Spark2D {
     /// <summary>
@@ -34,6 +35,13 @@ namespace Spark2D {
             rt.enableRandomWrite = true;
             rt.Create();
             return rt;
+        }
+
+        public static Texture2D CreateSinglePixelTexture(Color color) {
+            var tex = new Texture2D(1, 1, Application.isMobilePlatform ? TextureFormat.RGBAHalf : TextureFormat.RGBAFloat, false);
+            tex.SetPixel(0, 0, color);
+            tex.Apply();
+            return tex;
         }
 
         public static RenderTexture Clone(RenderTexture rt) {

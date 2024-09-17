@@ -1,14 +1,20 @@
 ﻿#pragma kernel HorizontalBlur
 #pragma kernel VerticalBlur
 
+#ifdef SHADER_API_MOBILE
+Texture2D<half4> input;
+Texture2D<half> blurMask;
+RWTexture2D<half4> result;
+#else
 Texture2D<float4> input;
-RWTexture2D<float4> Result;
+Texture2D<float> blurMask;
+RWTexture2D<float4> result;
+#endif
 SamplerState sampler_input;
+SamplerState sampler_blurMask;
 
-int BlurRadius;
-float BlurSigma;
-
-#define MAX_BLUR_RADIUS 32
+int blurRadius; // Maximum allowed blur radius
+float blurSigma; // Maximum allowed sigma
 
 [numthreads(8, 8, 1)]
 void HorizontalBlur(uint3 id : SV_DispatchThreadID) {
@@ -19,14 +25,21 @@ void HorizontalBlur(uint3 id : SV_DispatchThreadID) {
     input.GetDimensions(width, height);
     float2 uv = (id.xy + 0.5f) / float2(width, height);
 
-    for (int i = -BlurRadius; i <= BlurRadius; i++) {
+    // Sample the mask value (greyscale) at this pixel
+    float maskValue = blurMask.SampleLevel(sampler_blurMask, uv, 0);
+
+    // Adjust blur radius and sigma based on mask value
+    int dynamicBlurRadius = (int)(maskValue * blurRadius);
+    float dynamicBlurSigma = maskValue * blurSigma;
+
+    for (int i = -dynamicBlurRadius; i <= dynamicBlurRadius; i++) {
         float2 offset = float2(i, 0) / float2(width, height);
-        float weight = exp(-(i * i) / (2 * BlurSigma * BlurSigma));
+        float weight = exp(-(i * i) / (2 * dynamicBlurSigma * dynamicBlurSigma));
         color += input.SampleLevel(sampler_input, uv + offset, 0) * weight;
         weightSum += weight;
     }
 
-    Result[id.xy] = color / weightSum;
+    result[id.xy] = color / weightSum;
 }
 
 [numthreads(8, 8, 1)]
@@ -38,12 +51,19 @@ void VerticalBlur(uint3 id : SV_DispatchThreadID) {
     input.GetDimensions(width, height);
     float2 uv = (id.xy + 0.5f) / float2(width, height);
 
-    for (int i = -BlurRadius; i <= BlurRadius; i++) {
+    // Sample the mask value (greyscale) at this pixel
+    float maskValue = blurMask.SampleLevel(sampler_blurMask, uv, 0);
+
+    // Adjust blur radius and sigma based on mask value
+    int dynamicBlurRadius = (int)(maskValue * blurRadius);
+    float dynamicBlurSigma = maskValue * blurSigma;
+
+    for (int i = -dynamicBlurRadius; i <= dynamicBlurRadius; i++) {
         float2 offset = float2(0, i) / float2(width, height);
-        float weight = exp(-(i * i) / (2 * BlurSigma * BlurSigma));
+        float weight = exp(-(i * i) / (2 * dynamicBlurSigma * dynamicBlurSigma));
         color += input.SampleLevel(sampler_input, uv + offset, 0) * weight;
         weightSum += weight;
     }
 
-    Result[id.xy] = color / weightSum;
+    result[id.xy] = color / weightSum;
 }

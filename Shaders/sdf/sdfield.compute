@@ -67,7 +67,7 @@ float distance(SHAPE_TYPE shapeType, float2 coord) {
     case ShapeType_Stairs: return sdStairs(coord, float2(f1, f2), f3);
     case ShapeType_QuadraticCircle: return sdQuadraticCircle(coord);
     case ShapeType_Hyberbola: return sdHyberbola(coord, f1, f2);
-    case ShapeType_fCoolS: return sdfCoolS(coord);
+    case ShapeType_CoolS: return sdCoolS(coord);
     case ShapeType_CircleWave: return sdCircleWave(coord, f1, f2);
     default: return 0.0;
     }
