@@ -45,3 +45,7 @@ The [OneJS](https://onejs.com) bindings are available at https://github.com/Sing
 #define OP_RECIPROCAL 40
 #define OP_RECIPROCAL_SQRT 41
 ```
+
+Besides the compute shaders, the library also contains a Bursted (faster) version of CatlikeCoding's [SDF Texture Generator](https://catlikecoding.com/sdf-toolkit/docs/texture-generator/).
+
+Our goal is to add many more useful 2D algorithms and compute shaders to this library. A 2D particle system is also in the works. 
