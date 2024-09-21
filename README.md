@@ -1,4 +1,6 @@
-﻿WIP. Under Active development. Follow [@Singtaa](https://x.com/Singtaa) for updates.
+https://github.com/user-attachments/assets/f29f70e1-a75f-4278-972b-babb8c7a3857
+ 
+WIP. Under Active development. Follow [@Singtaa](https://x.com/Singtaa) for updates.
 
 The [OneJS](https://onejs.com) bindings are available at https://github.com/Singtaa/onejs-spark2d. Currently, the library contains the following compute shaders:
 
@@ -48,4 +50,4 @@ The [OneJS](https://onejs.com) bindings are available at https://github.com/Sing
 
 Besides the compute shaders, the library also contains a Bursted (faster) version of CatlikeCoding's [SDF Texture Generator](https://catlikecoding.com/sdf-toolkit/docs/texture-generator/).
 
-Our goal is to add many more useful 2D algorithms and compute shaders to this library. A 2D particle system is also in the works. 
+The goal is to add many more useful 2D algorithms and compute shaders to this library. A 2D particle system is also in the works. 
