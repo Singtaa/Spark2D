@@ -6,11 +6,12 @@ The [OneJS](https://onejs.com) bindings are available at https://github.com/Sing
 
 1. fbm: Fractal Brownian Motion for generating noise
 2. sdfield: Signed Distance Field for generating 2D shapes
-3. maop: Math Operations for common math operations
-4. trans: Transformations for rotating, scaling, and translating textures
-5. blur: Gaussian Blur for blurring textures
-6. grad: Gradient for generating multi-color linear gradients
-7. dye: for applying multi-color gradients to greyscale textures
+3. sdgen: Jump Flood based SDF generation
+4. maop: Math Operations for common math operations
+5. trans: Transformations for rotating, scaling, and translating textures
+6. blur: Gaussian Blur for blurring textures
+7. grad: Gradient for generating multi-color linear gradients
+8. dye: for applying multi-color gradients to greyscale textures
 
 `sdfield` contains almost all the 2D shapes on [Inigo Quilez's page](https://iquilezles.org/articles/distfunctions2d/).
 
