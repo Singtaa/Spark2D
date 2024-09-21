@@ -1,0 +1,21 @@
+﻿#pragma kernel CSMain
+
+#ifdef SHADER_API_MOBILE
+Texture2D<half4> inputA;
+Texture2D<half4> inputB;
+RWTexture2D<half4> result;
+#else
+Texture2D<float4> inputA;
+Texture2D<float4> inputB;
+RWTexture2D<float4> result;
+#endif
+
+SamplerState sampler_inputA;
+SamplerState sampler_inputB;
+
+/**
+ * TODO: Immutable version of maop
+ */
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+}

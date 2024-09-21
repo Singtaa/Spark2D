@@ -1,0 +1,108 @@
+﻿#pragma kernel Initialize
+#pragma kernel JumpFloodPass
+#pragma kernel ComputeSignedDistance
+
+#ifdef SHADER_API_MOBILE
+Texture2D<half4> InputA;
+RWTexture2D<half4> Result;
+Texture2D<half4> PrevResult;
+#else
+Texture2D<float4> InputA;
+RWTexture2D<float4> Result;
+Texture2D<float4> PrevResult;
+#endif
+
+int JumpSize;
+
+static const int NUM_DIRECTIONS = 8;
+static const float2 Directions[NUM_DIRECTIONS] = {
+    float2(0, -1), // North
+    float2(1, -1), // Northeast
+    float2(1, 0), // East
+    float2(1, 1), // Southeast
+    float2(0, 1), // South
+    float2(-1, 1), // Southwest
+    float2(-1, 0), // West
+    float2(-1, -1) // Northwest
+};
+
+// Initialize kernel: sets up the initial feature positions
+[numthreads(8, 8, 1)]
+void Initialize(uint3 id : SV_DispatchThreadID) {
+    uint width, height;
+    InputA.GetDimensions(width, height);
+    if (id.x >= width || id.y >= height)
+        return;
+
+    float4 inputValue = InputA.Load(int3(id.xy, 0));
+    bool isFeature = inputValue.a > 0.1; // Assuming feature information is in the alpha channel
+
+    float2 pos = id.xy;
+
+    if (isFeature) {
+        // Feature pixel: store its own position
+        Result[id.xy] = float4(pos, 1, 0);
+    } else {
+        // Non-feature pixel: initialize with invalid position
+        Result[id.xy] = float4(-1.0 / 0.0, -1.0 / 0.0, 0, 0); // Note the negative infinities here
+    }
+}
+
+// Jump Flood Pass kernel: updates feature positions based on neighbors
+[numthreads(8, 8, 1)]
+void JumpFloodPass(uint3 id : SV_DispatchThreadID) {
+    uint width, height;
+    InputA.GetDimensions(width, height);
+    if (id.x >= width || id.y >= height)
+        return;
+
+    float2 currentPos = id.xy;
+    float4 currentFeature = PrevResult.Load(int3(id.xy, 0));
+
+    float minDistSq = dot(currentPos - currentFeature.xy, currentPos - currentFeature.xy);
+
+    // Iterate over neighbor directions
+    [unroll]
+    for (int i = 0; i < NUM_DIRECTIONS; i++) {
+        float2 dir = Directions[i];
+        int2 samplePos = (int2)(currentPos + dir * JumpSize);
+
+        // Check bounds
+        if (samplePos.x >= 0 && samplePos.x < width && samplePos.y >= 0 && samplePos.y < height) {
+            float4 neighborFeature = PrevResult.Load(int3(samplePos, 0));
+            if (neighborFeature.z > 0.5) {
+                float distSq = dot(currentPos - neighborFeature.xy, currentPos - neighborFeature.xy);
+                if (distSq < minDistSq) {
+                    currentFeature = neighborFeature;
+                    minDistSq = distSq;
+                }
+            }
+        }
+    }
+
+    Result[id.xy] = currentFeature;
+}
+
+// Compute Signed Distance kernel: calculates the signed distance field
+[numthreads(8, 8, 1)]
+void ComputeSignedDistance(uint3 id : SV_DispatchThreadID) {
+    uint width, height;
+    InputA.GetDimensions(width, height);
+    if (id.x >= width || id.y >= height)
+        return;
+
+    float4 inputValue = InputA.Load(int3(id.xy, 0));
+    bool isFeature = inputValue.a > 0.5; // Assuming feature information is in the alpha channel
+
+    float2 currentPos = id.xy;
+    float4 featurePos = PrevResult.Load(int3(id.xy, 0));
+
+    float distance = length(currentPos - featurePos.xy);
+
+
+    if (isFeature) {
+        distance = -distance; // Inside the feature
+    }
+
+    Result[id.xy] = float4(distance, distance, distance, 1);
+}

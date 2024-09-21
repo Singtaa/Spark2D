@@ -1,0 +1,51 @@
+﻿#pragma kernel CSMain
+
+#ifdef SHADER_API_MOBILE
+Texture2D<half4> inputA;
+Texture2D<half4> inputB;
+RWTexture2D<half4> result;
+#else
+Texture2D<float4> inputA;
+Texture2D<float4> inputB;
+RWTexture2D<float4> result;
+#endif
+
+SamplerState sampler_inputA;
+SamplerState sampler_inputB;
+
+float t = 0;
+
+// TODO: maybe add routes like maop
+
+float smoothUnion(float4 d1, float4 d2, float k) {
+    float h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+    return lerp(d2, d1, h) - k * h * (1.0 - h);
+}
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    uint width, height;
+    result.GetDimensions(width, height);
+
+    if (id.x < width && id.y < height) {
+        // Calculate UV coordinates
+        float2 uv = float2((id.x + 0.5f) / width, (id.y + 0.5f) / height);
+
+        // Sample colors using the samplers
+        float4 colorA = inputA.SampleLevel(sampler_inputA, uv, 0);
+        float4 colorB = inputB.SampleLevel(sampler_inputB, uv, 0);
+
+        // float p = 1 - abs(2 * t - 1);
+        float k = width / 4;
+        float4 res;
+        if (t < 0.5) {
+            float4 b = lerp(colorA, colorB, t * 2);
+            res = smoothUnion(colorA, b, t * 2 * k); // k increasing
+        } else {
+            float4 a = lerp(colorA, colorB, (t - 0.5) * 2);
+            res = smoothUnion(a, colorB, (1 - t) * 2 * k); // k decreasing
+        }
+
+        result[id.xy] = float4(res.xyz, 1);
+    }
+}

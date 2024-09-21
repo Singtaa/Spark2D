@@ -13,23 +13,23 @@ float2 offset; // In UV space
 float rotation;
 float2 scale;
 
+bool tiling = false;
+float4 bgColor = float4(0, 0, 0, 1);
+
 [numthreads(8, 8, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID) {
     uint width, height;
     result.GetDimensions(width, height);
-    
+
     // Convert pixel coordinates to UV space (0 to 1)
     float2 uv = (id.xy + 0.5) / float2(width, height);
-    
     // Apply offset before any other transformation
     uv -= offset;
-    
     // Center the UV coordinates before applying transformations
     uv -= 0.5;
-    
     // Apply scaling
     uv /= scale;
-    
+
     // Apply rotation around the center
     float sinR = sin(rotation);
     float cosR = cos(rotation);
@@ -37,13 +37,21 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
         cosR * uv.x - sinR * uv.y,
         sinR * uv.x + cosR * uv.y
     );
-    
+
     // Move back from center
     rotatedUV += 0.5;
-    
-    // Sample the texture with tiling (frac ensures UV wraps around)
-    float4 sampledColor = tex1.SampleLevel(samplertex1, frac(rotatedUV), 0);
-    
-    // Write the result
+
+    float4 sampledColor;
+    if (tiling) {
+        // Tiling is enabled: wrap UV coordinates using frac
+        sampledColor = tex1.SampleLevel(samplertex1, frac(rotatedUV), 0);
+    } else {
+        // Tiling is disabled: check if UV is within [0, 1]
+        bool inside = (rotatedUV.x >= 0.0f && rotatedUV.x <= 1.0f) &&
+            (rotatedUV.y >= 0.0f && rotatedUV.y <= 1.0f);
+
+        sampledColor = inside ? tex1.SampleLevel(samplertex1, rotatedUV, 0) : bgColor;
+    }
+
     result[id.xy] = sampledColor;
 }

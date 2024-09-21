@@ -10,6 +10,7 @@ Texture2D<float4> inputB;
 SamplerState sampler_inputB;
 
 float4 scalars;
+float4 extras;
 int operation;
 int mode;
 
@@ -44,6 +45,11 @@ int4 routes = {0, 1, 2, 4}; // 0: r, 1: g, 2: b, 3: a, 4: ignored
 #define OP_POSTERIZE 39
 #define OP_RECIPROCAL 40
 #define OP_RECIPROCAL_SQRT 41
+
+// Interpolation
+#define OP_LERP 48
+#define OP_SMOOTHSTEP 49
+#define OP_INVERSE_LERP 50
 
 #define MODE_TEXTURE 0
 #define MODE_VECTOR 1
@@ -153,6 +159,16 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
         break;
     case OP_RECIPROCAL_SQRT:
         res = rsqrt(a);
+        break;
+    // Interpolation
+    case OP_LERP:
+        res = lerp(a, b, extras.x);
+        break;
+    case OP_SMOOTHSTEP:
+        res = smoothstep(scalars.x, scalars.y, a);
+        break;
+    case OP_INVERSE_LERP:
+        res = (a - b) / (scalars.x - b);
         break;
     default: break;
     }
