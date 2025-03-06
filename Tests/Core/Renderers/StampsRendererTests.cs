@@ -220,54 +220,51 @@ namespace Spark2D.Tests.Core.Renderers {
 
         [UnityTest]
         public IEnumerator Render_DifferentBlendModes_ProduceDifferentResults() {
-            // This test verifies that different blend modes actually produce different visual results
-
             // Arrange
             StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
             renderer.SetupRenderTexture(256, 256);
 
-            // Set up for the first render (Normal blend)
-            renderer.SetBlendMode(StampsRenderer.BlendMode.Normal);
-            renderer.Render(Color.clear);
+            // Use colored background and tint to make blend differences visible
+            Color backgroundColor = new Color(0.2f, 0.2f, 0.5f, 1.0f);
+            renderer.SetColor("_Color", Color.red);
+            renderer.ClearColor = backgroundColor;
 
-            // Wait for rendering to complete
+            // First render with Normal blend
+            renderer.SetBlendMode(StampsRenderer.BlendMode.Normal);
+            renderer.Render(true);
             yield return null;
 
-            // Capture the result of the first render
-            RenderTexture tempRT1 = RenderTexture.GetTemporary(256, 256);
-            Graphics.Blit(renderer.RenderTexture, tempRT1);
-            RenderTexture.active = tempRT1;
+            // Capture Normal blend result
             Texture2D normalBlendResult = new Texture2D(256, 256, TextureFormat.RGBA32, false);
+            RenderTexture.active = renderer.RenderTexture;
             normalBlendResult.ReadPixels(new Rect(0, 0, 256, 256), 0, 0);
             normalBlendResult.Apply();
             RenderTexture.active = null;
 
-            // Set up for the second render (Additive blend)
+            // Now render with Additive blend
             renderer.SetBlendMode(StampsRenderer.BlendMode.Additive);
-            renderer.Render(Color.clear);
-
-            // Wait for rendering to complete
+            renderer.Render(true);
             yield return null;
 
-            // Capture the result of the second render
-            RenderTexture tempRT2 = RenderTexture.GetTemporary(256, 256);
-            Graphics.Blit(renderer.RenderTexture, tempRT2);
-            RenderTexture.active = tempRT2;
+            // Capture Additive blend result
             Texture2D additiveBlendResult = new Texture2D(256, 256, TextureFormat.RGBA32, false);
+            RenderTexture.active = renderer.RenderTexture;
             additiveBlendResult.ReadPixels(new Rect(0, 0, 256, 256), 0, 0);
             additiveBlendResult.Apply();
             RenderTexture.active = null;
 
-            // Compare the results - they should be different
+            // Compare the results
             Color[] normalPixels = normalBlendResult.GetPixels();
             Color[] additivePixels = additiveBlendResult.GetPixels();
 
             bool pixelsDiffer = false;
             for (int i = 0; i < normalPixels.Length; i++) {
-                if (Mathf.Abs(normalPixels[i].r - additivePixels[i].r) > 0.01f ||
-                    Mathf.Abs(normalPixels[i].g - additivePixels[i].g) > 0.01f ||
-                    Mathf.Abs(normalPixels[i].b - additivePixels[i].b) > 0.01f ||
-                    Mathf.Abs(normalPixels[i].a - additivePixels[i].a) > 0.01f) {
+                float diffR = Mathf.Abs(normalPixels[i].r - additivePixels[i].r);
+                float diffG = Mathf.Abs(normalPixels[i].g - additivePixels[i].g);
+                float diffB = Mathf.Abs(normalPixels[i].b - additivePixels[i].b);
+                float diffA = Mathf.Abs(normalPixels[i].a - additivePixels[i].a);
+
+                if (diffR > 0.01f || diffG > 0.01f || diffB > 0.01f || diffA > 0.01f) {
                     pixelsDiffer = true;
                     break;
                 }
@@ -276,11 +273,10 @@ namespace Spark2D.Tests.Core.Renderers {
             Assert.IsTrue(pixelsDiffer, "Different blend modes should produce different visual results");
 
             // Cleanup
-            RenderTexture.ReleaseTemporary(tempRT1);
-            RenderTexture.ReleaseTemporary(tempRT2);
             Object.DestroyImmediate(normalBlendResult);
             Object.DestroyImmediate(additiveBlendResult);
             renderer.Dispose();
         }
+        
     }
 }

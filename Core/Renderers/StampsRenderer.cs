@@ -97,9 +97,9 @@ namespace Spark2D {
             _stampTexture = stampTexture;
 
             // Initialize shader and material
-            _shader = Shader.Find("Unlit/Transparent");
+            _shader = Shader.Find("Spark2D/StampShader");
             if (_shader == null) {
-                Debug.LogError("Failed to find Unlit/Transparent shader. Make sure it's included in the project.");
+                Debug.LogError("Failed to find Spark2D/StampShader shader. Make sure it's included in the project.");
                 return;
             }
 
@@ -155,13 +155,11 @@ namespace Spark2D {
             }
         }
 
-        /// <summary>
-        /// Sets the blend mode for the material.
-        /// </summary>
         public void SetBlendMode(BlendMode blendMode) {
             if (_material == null)
                 return;
 
+            // First, set blend mode parameters
             switch (blendMode) {
                 case BlendMode.Normal:
                     _material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
@@ -180,8 +178,16 @@ namespace Spark2D {
                     _material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcColor);
                     break;
             }
+
+            // Ensure shader knows to apply these blend settings
+            _material.DisableKeyword("_ALPHATEST_ON");
+            _material.EnableKeyword("_ALPHABLEND_ON");
+            _material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+
+            // Make sure the render queue is appropriate for transparency
+            _material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         }
-        
+
         public void SetIntensity(float intensity) {
             if (_material != null) {
                 _material.SetFloat("_Intensity", intensity);
