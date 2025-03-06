@@ -47,7 +47,7 @@ namespace Spark2D {
             _dXs = new NativeArray<int>(totalPixels, Allocator.TempJob);
             _dYs = new NativeArray<int>(totalPixels, Allocator.TempJob);
 
-            int x, y;
+            // int x, y;
             float scale;
             Color32 defaultColor = rgbMode == RGBFillMode.White ? Color.white : Color.black;
 

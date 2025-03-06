@@ -151,7 +151,7 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
         break;
     case OP_POSTERIZE:
         // Posterize: floor(a / b) * b
-        res = floor(a / (1 / b)) * (1 / b);
+        // res = floor(a / (1 / b)) * (1 / b);
         res = floor(a / b) * b;
         break;
     case OP_RECIPROCAL:

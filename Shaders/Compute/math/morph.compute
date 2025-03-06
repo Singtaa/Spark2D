@@ -36,7 +36,7 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
         float4 colorB = inputB.SampleLevel(sampler_inputB, uv, 0);
 
         // float p = 1 - abs(2 * t - 1);
-        float k = width / 4;
+        float k = width / 8;
         float4 res;
         if (t < 0.5) {
             float4 b = lerp(colorA, colorB, t * 2);

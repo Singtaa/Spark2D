@@ -39,9 +39,27 @@ namespace Spark2D {
 
         public static Texture2D CreateSinglePixelTexture(Color color) {
             var tex = new Texture2D(1, 1, Application.isMobilePlatform ? TextureFormat.RGBAHalf : TextureFormat.RGBAFloat, false);
-            tex.SetPixel(0, 0, color);
-            tex.Apply();
+            Color32[] colors = { color };
+            tex.SetPixels32(colors);
+            tex.Apply(false); // false = don't make texture readable
             return tex;
+        }
+
+        public static RenderTexture CreateSinglePixelRenderTexture(Color color) {
+            // Create and initialize the RenderTexture
+            var rt = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat);
+            rt.enableRandomWrite = true;
+            rt.Create();
+
+            // Clear with color
+            RenderTexture prevRT = RenderTexture.active;
+            RenderTexture.active = rt;
+            GL.Clear(true, true, color);
+
+            // Restore previous active RT
+            RenderTexture.active = prevRT;
+
+            return rt;
         }
 
         public static RenderTexture Clone(RenderTexture rt) {
