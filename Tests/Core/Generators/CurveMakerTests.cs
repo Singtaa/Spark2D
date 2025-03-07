@@ -1,106 +1,366 @@
 ﻿using System;
+using System.Linq;
 using NUnit.Framework;
 using Unity.Mathematics;
 
 namespace Spark2D.Tests.Core.Generators {
     public class CurveMakerTests {
-        private CurveMaker _curveMaker;
-        private float2[] _testControlPoints;
-        private int _pointCount = 20;
+        // Basic control points for a simple curve
+        private float2[] _simpleLinePoints;
+        private float2[] _quadraticCurvePoints;
+        private float2[] _cubicCurvePoints;
+        private float2[] _complexCurvePoints;
 
         [SetUp]
         public void Setup() {
-            // Create test control points for each test
-            _testControlPoints = new float2[] {
+            // Initialize various test cases
+            _simpleLinePoints = new float2[] {
                 new float2(0, 0),
-                new float2(1, 2),
-                new float2(3, 1),
-                new float2(4, 0)
+                new float2(10, 0)
             };
 
-            _curveMaker = new CurveMaker(_testControlPoints, _pointCount);
+            _quadraticCurvePoints = new float2[] {
+                new float2(0, 0),
+                new float2(5, 10),
+                new float2(10, 0)
+            };
+
+            _cubicCurvePoints = new float2[] {
+                new float2(0, 0),
+                new float2(2, 10),
+                new float2(8, 10),
+                new float2(10, 0)
+            };
+
+            _complexCurvePoints = new float2[] {
+                new float2(0, 0),
+                new float2(2, 5),
+                new float2(4, -2),
+                new float2(6, 5),
+                new float2(8, -1),
+                new float2(10, 0)
+            };
+        }
+
+        #region Initialization Tests
+
+        [Test]
+        public void Constructor_WithValidParameters_InitializesCorrectly() {
+            // Arrange & Act
+            var curveMaker = new CurveMaker(_simpleLinePoints, 10, 1.0f, PointGenerationMode.Count, true);
+
+            // Assert
+            Assert.AreEqual(10, curveMaker.Count);
+            Assert.AreEqual(1.0f, curveMaker.Spacing);
+            Assert.AreEqual(PointGenerationMode.Count, curveMaker.PointGenerationMode);
+            Assert.IsTrue(curveMaker.EvenSpacing);
+            Assert.AreEqual(2, curveMaker.ControlPoints.Count);
+            Assert.AreEqual(new float2(0, 0), curveMaker.ControlPoints[0]);
+            Assert.AreEqual(new float2(10, 0), curveMaker.ControlPoints[1]);
         }
 
         [Test]
-        public void CurveMaker_InitializesCorrectly() {
-            // Verify constructor properly initializes properties
-            Assert.AreEqual(_pointCount, _curveMaker.Count);
-            Assert.AreEqual(_testControlPoints.Length, _curveMaker.ControlPoints.Length);
+        public void Constructor_WithDefaults_UsesDefaultValues() {
+            // Arrange & Act
+            var curveMaker = new CurveMaker(_simpleLinePoints);
 
-            // Verify properties contain the correct values
-            for (int i = 0; i < _testControlPoints.Length; i++) {
-                Assert.AreEqual(_testControlPoints[i].x, _curveMaker.ControlPoints[i].x);
-                Assert.AreEqual(_testControlPoints[i].y, _curveMaker.ControlPoints[i].y);
+            // Assert
+            Assert.AreEqual(20, curveMaker.Count);  // Default count is 20
+            Assert.AreEqual(1.0f, curveMaker.Spacing);  // Default spacing is 1.0
+            Assert.AreEqual(PointGenerationMode.Count, curveMaker.PointGenerationMode);  // Default mode is Count
+            Assert.IsTrue(curveMaker.EvenSpacing);  // Default is true for even spacing
+        }
+
+        [Test]
+        public void Constructor_WithInvalidControlPoints_ThrowsException() {
+            // Arrange
+            float2[] invalidPoints = new float2[] { new float2(0, 0) };  // Only one point
+
+            // Act & Assert
+            Assert.Throws<ArgumentException>(() => new CurveMaker(invalidPoints));
+        }
+
+        #endregion
+
+        #region Control Points Tests
+
+        [Test]
+        public void ControlPoints_WhenChanged_InvalidatesCache() {
+            // Arrange
+            var curveMaker = new CurveMaker(_simpleLinePoints);
+            
+            // Generate points to build the cache
+            curveMaker.Generate();
+            float initialLength = curveMaker.GetTotalLength();
+            
+            // Act - Change control points to a curve with different length
+            curveMaker.ControlPoints = _quadraticCurvePoints;
+            
+            // Assert
+            float newLength = curveMaker.GetTotalLength();
+            Assert.AreNotEqual(initialLength, newLength);
+        }
+
+        [Test]
+        public void ControlPoints_WithInvalidInput_ThrowsException() {
+            // Arrange
+            var curveMaker = new CurveMaker(_simpleLinePoints);
+            
+            // Act & Assert
+            Assert.Throws<ArgumentException>(() => curveMaker.ControlPoints = null);
+            Assert.Throws<ArgumentException>(() => curveMaker.ControlPoints = new float2[] { new float2(0, 0) });
+        }
+
+        #endregion
+
+        #region Generation Mode Tests
+
+        [Test]
+        public void Generate_WithCountMode_ProducesCorrectNumberOfPoints() {
+            // Arrange
+            var curveMaker = new CurveMaker(_cubicCurvePoints);
+            curveMaker.Count = 15;
+            curveMaker.PointGenerationMode = PointGenerationMode.Count;
+            
+            // Act
+            curveMaker.Generate();
+            
+            // Assert
+            Assert.AreEqual(15, curveMaker.OutputPoints.Count);
+        }
+
+        [Test]
+        public void Generate_WithSpacingMode_ProducesPointsAtCorrectDistance() {
+            // Arrange
+            var curveMaker = new CurveMaker(_cubicCurvePoints);
+            curveMaker.Spacing = 2.0f;
+            curveMaker.PointGenerationMode = PointGenerationMode.Spacing;
+            curveMaker.EvenSpacing = true;
+            
+            // Act
+            curveMaker.Generate();
+            
+            // Get total length to calculate expected number of points
+            float totalLength = curveMaker.GetTotalLength();
+            int expectedPoints = Math.Max(2, (int)Math.Ceiling(totalLength / 2.0f) + 1);
+            
+            // Assert
+            Assert.AreEqual(expectedPoints, curveMaker.OutputPoints.Count);
+            
+            // Check spacing between points (with some tolerance for numeric issues)
+            for (int i = 1; i < curveMaker.OutputPoints.Count - 1; i++) {
+                float distance = math.distance(curveMaker.OutputPoints[i - 1], curveMaker.OutputPoints[i]);
+                Assert.AreEqual(2.0f, distance, 0.1f);
             }
         }
 
         [Test]
-        public void Generate_ReturnsCorrectNumberOfPoints() {
-            Array resultPoints = _curveMaker.Generate();
-            Assert.AreEqual(_pointCount, resultPoints.Length);
+        public void Generate_WhenSwitchingModes_UpdatesOutputPointsCount() {
+            // Arrange
+            var curveMaker = new CurveMaker(_quadraticCurvePoints);
+            curveMaker.Count = 10;
+            curveMaker.PointGenerationMode = PointGenerationMode.Count;
+            curveMaker.Generate();
+            
+            // Act
+            curveMaker.PointGenerationMode = PointGenerationMode.Spacing;
+            curveMaker.Spacing = 1.0f;
+            curveMaker.Generate();
+            
+            // Assert
+            float totalLength = curveMaker.GetTotalLength();
+            int expectedPoints = Math.Max(2, (int)Math.Ceiling(totalLength / 1.0f) + 1);
+            Assert.AreEqual(expectedPoints, curveMaker.OutputPoints.Count);
+        }
+
+        #endregion
+
+        #region Spacing Type Tests
+
+        [Test]
+        public void Generate_WithEvenSpacingTrue_ProducesEvenlyDistributedPoints() {
+            // Arrange
+            var curveMaker = new CurveMaker(_cubicCurvePoints);
+            curveMaker.Count = 10;
+            curveMaker.EvenSpacing = true;
+            
+            // Act
+            curveMaker.Generate();
+            
+            // Assert
+            var points = curveMaker.OutputPoints;
+            
+            // Calculate distances between consecutive points
+            float[] distances = new float[points.Count - 1];
+            for (int i = 0; i < points.Count - 1; i++) {
+                distances[i] = math.distance(points[i], points[i + 1]);
+            }
+            
+            // Calculate standard deviation of distances
+            float mean = distances.Sum() / distances.Length;
+            float variance = distances.Sum(d => (d - mean) * (d - mean)) / distances.Length;
+            float stdDev = (float)Math.Sqrt(variance);
+            
+            // With even spacing, standard deviation should be close to zero
+            Assert.Less(stdDev / mean, 0.05f);  // Less than 5% variation
         }
 
         [Test]
-        public void Generate_FirstPointMatchesFirstControlPoint() {
-            Array resultPoints = _curveMaker.Generate();
-            float2 firstPoint = (float2)resultPoints.GetValue(0);
+        public void Generate_WithEvenSpacingFalse_ProducesUniformParameterSpacing() {
+            // Arrange
+            var curveMaker = new CurveMaker(_cubicCurvePoints);
+            curveMaker.Count = 5; // Using 5 points for simplicity
+            curveMaker.EvenSpacing = false;
+            
+            // Act
+            curveMaker.Generate();
+            
+            // Assert
+            var points = curveMaker.OutputPoints;
+            
+            // First and last points should match control points
+            Assert.AreEqual(_cubicCurvePoints[0], points[0]);
+            Assert.AreEqual(_cubicCurvePoints[_cubicCurvePoints.Length - 1], points[points.Count - 1]);
+            
+            // For uniform parameter spacing, the key property is that t values are evenly distributed
+            // We can verify this by checking that a point calculated directly at t=0.5 matches 
+            // the middle point generated by our curve maker
+            float2 middlePointDirect = curveMaker.ComputePoint(0.5f);
+            float2 middlePointGenerated = points[points.Count / 2];
+            
+            Assert.AreEqual(middlePointDirect.x, middlePointGenerated.x, 0.01f);
+            Assert.AreEqual(middlePointDirect.y, middlePointGenerated.y, 0.01f);
+        }
 
-            Assert.AreEqual(_testControlPoints[0].x, firstPoint.x);
-            Assert.AreEqual(_testControlPoints[0].y, firstPoint.y);
+        #endregion
+
+        #region Curve Properties Tests
+
+        [Test]
+        public void GetTotalLength_WithStraightLine_ReturnsCorrectLength() {
+            // Arrange
+            var curveMaker = new CurveMaker(_simpleLinePoints);
+            
+            // Act
+            float length = curveMaker.GetTotalLength();
+            
+            // Assert
+            Assert.AreEqual(10.0f, length, 0.1f);  // Allow small tolerance for numeric precision
         }
 
         [Test]
-        public void Generate_LastPointMatchesLastControlPoint() {
-            Array resultPoints = _curveMaker.Generate();
-            float2 lastPoint = (float2)resultPoints.GetValue(_pointCount - 1);
-            float2 lastControlPoint = _testControlPoints[_testControlPoints.Length - 1];
-
-            Assert.AreEqual(lastControlPoint.x, lastPoint.x);
-            Assert.AreEqual(lastControlPoint.y, lastPoint.y);
+        public void GetTotalLength_WithCurve_GivesConsistentResultsAfterRegeneration() {
+            // Arrange
+            var curveMaker = new CurveMaker(_quadraticCurvePoints);
+            
+            // Act
+            float length1 = curveMaker.GetTotalLength();
+            curveMaker.Generate();
+            float length2 = curveMaker.GetTotalLength();
+            
+            // Assert
+            Assert.AreEqual(length1, length2);
         }
 
         [Test]
-        public void ControlPoints_Setter_ThrowsExceptionForLessThanTwoPoints() {
-            // Create an invalid control points array
-            float2[] invalidPoints = new float2[] { new float2(0, 0) };
+        public void ComputePoint_WithParameterT_ReturnsCorrectPointOnCurve() {
+            // Arrange
+            var curveMaker = new CurveMaker(_simpleLinePoints);
+            
+            // Act
+            float2 midPoint = curveMaker.ComputePoint(0.5f);
+            
+            // Assert
+            Assert.AreEqual(5.0f, midPoint.x);  // 50% along the x-axis
+            Assert.AreEqual(0.0f, midPoint.y);  // y should remain 0 for straight horizontal line
+        }
 
-            // Expect exception when setting less than 2 points
-            Exception ex = Assert.Throws<Exception>(() => _curveMaker.ControlPoints = invalidPoints);
-            Assert.That(ex.Message, Is.EqualTo("Control points must have at least 2 points"));
+        #endregion
+
+        #region Complex Usage Examples
+
+        [Test]
+        public void Example_GeneratingEvenlySpacedPointsForPath() {
+            // This test demonstrates how to generate evenly spaced points for a path
+            
+            // Arrange - Create a complex path with control points
+            var curveMaker = new CurveMaker(_complexCurvePoints);
+            
+            // Configure for even spacing with 0.5 units between points
+            curveMaker.PointGenerationMode = PointGenerationMode.Spacing;
+            curveMaker.Spacing = 0.5f;
+            curveMaker.EvenSpacing = true;
+            
+            // Act - Generate points
+            curveMaker.Generate();
+            
+            // Assert - Check that we have an appropriate number of points
+            float totalLength = curveMaker.GetTotalLength();
+            int expectedPoints = Math.Max(2, (int)Math.Ceiling(totalLength / 0.5f) + 1);
+            Assert.AreEqual(expectedPoints, curveMaker.OutputPoints.Count);
+            
+            // Check first and last points match control points
+            Assert.AreEqual(_complexCurvePoints[0], curveMaker.OutputPoints[0]);
+            Assert.AreEqual(_complexCurvePoints[_complexCurvePoints.Length - 1], 
+                curveMaker.OutputPoints[curveMaker.OutputPoints.Count - 1]);
         }
 
         [Test]
-        public void Count_Setter_ThrowsExceptionForLessThanTwoPoints() {
-            // Expect exception when setting count to less than 2
-            Exception ex = Assert.Throws<Exception>(() => _curveMaker.Count = 1);
-            Assert.That(ex.Message, Is.EqualTo("Count must be at least 2"));
+        public void Example_CreatingAnimationKeyframesWithUniformParameter() {
+            // This test demonstrates generating points with uniform parameter spacing
+            // which is useful for animation keyframes
+            
+            // Arrange - Create a curve for an animation path
+            var curveMaker = new CurveMaker(_cubicCurvePoints);
+            
+            // Configure for count-based generation with non-uniform spacing
+            curveMaker.PointGenerationMode = PointGenerationMode.Count;
+            curveMaker.Count = 30;  // 30 animation frames
+            curveMaker.EvenSpacing = false;  // Uniform parameter (better for certain animations)
+            
+            // Act - Generate animation keyframes
+            curveMaker.Generate();
+            
+            // Assert - Verify we have exactly the requested number of points
+            Assert.AreEqual(30, curveMaker.OutputPoints.Count);
+            
+            // Verify start and end points
+            Assert.AreEqual(_cubicCurvePoints[0], curveMaker.OutputPoints[0]);
+            Assert.AreEqual(_cubicCurvePoints[_cubicCurvePoints.Length - 1], 
+                curveMaker.OutputPoints[curveMaker.OutputPoints.Count - 1]);
         }
 
         [Test]
-        public void Generate_HandlesMinimumValidInput() {
-            // Setup minimum valid case - 2 control points and 2 count
-            float2[] minPoints = new float2[] {
-                new float2(0, 0),
-                new float2(1, 1)
-            };
-
-            _curveMaker.ControlPoints = minPoints;
-            _curveMaker.Count = 2;
-
-            Array resultPoints = _curveMaker.Generate();
-
-            // Verify we get exactly 2 points
-            Assert.AreEqual(2, resultPoints.Length);
-
-            // First point should match first control point
-            float2 firstPoint = (float2)resultPoints.GetValue(0);
-            Assert.AreEqual(minPoints[0].x, firstPoint.x);
-            Assert.AreEqual(minPoints[0].y, firstPoint.y);
-
-            // Last point should match last control point
-            float2 lastPoint = (float2)resultPoints.GetValue(1);
-            Assert.AreEqual(minPoints[1].x, lastPoint.x);
-            Assert.AreEqual(minPoints[1].y, lastPoint.y);
+        public void Example_ChangeControlPointsDynamically() {
+            // This test demonstrates dynamically changing control points
+            
+            // Arrange - Start with a simple line
+            var curveMaker = new CurveMaker(_simpleLinePoints);
+            curveMaker.Count = 10;
+            curveMaker.Generate();
+            
+            // Remember the initial points
+            var initialPoints = new float2[curveMaker.OutputPoints.Count];
+            for (int i = 0; i < curveMaker.OutputPoints.Count; i++) {
+                initialPoints[i] = curveMaker.OutputPoints[i];
+            }
+            
+            // Act - Change control points to a curve
+            curveMaker.ControlPoints = _quadraticCurvePoints;
+            curveMaker.Generate();
+            
+            // Assert - Verify points have changed
+            bool allPointsSame = true;
+            for (int i = 0; i < curveMaker.OutputPoints.Count; i++) {
+                if (!math.all(curveMaker.OutputPoints[i] == initialPoints[i])) {
+                    allPointsSame = false;
+                    break;
+                }
+            }
+            
+            Assert.IsFalse(allPointsSame);
         }
+
+        #endregion
     }
 }
