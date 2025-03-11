@@ -116,7 +116,7 @@ namespace Spark2D.Tests.Core.Renderers {
             Assert.IsFalse(renderer.AutoClear);
 
             // OrthoSize property
-            float newSize = 2.5f;
+            var newSize = Vector2.one * 2.5f;
             renderer.OrthoSize = newSize;
             Assert.AreEqual(newSize, renderer.OrthoSize);
 
@@ -142,8 +142,8 @@ namespace Spark2D.Tests.Core.Renderers {
             StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
 
             // Act & Assert
-            Assert.Throws<System.Exception>(() => renderer.OrthoSize = 0);
-            Assert.Throws<System.Exception>(() => renderer.OrthoSize = -1);
+            Assert.Throws<System.Exception>(() => renderer.OrthoSize = Vector2.zero);
+            Assert.Throws<System.Exception>(() => renderer.OrthoSize = -1 * Vector2.one);
 
             // Cleanup
             renderer.Dispose();
@@ -277,6 +277,5 @@ namespace Spark2D.Tests.Core.Renderers {
             Object.DestroyImmediate(additiveBlendResult);
             renderer.Dispose();
         }
-        
     }
 }

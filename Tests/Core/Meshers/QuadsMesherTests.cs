@@ -1,27 +1,25 @@
 ﻿using System;
 using NUnit.Framework;
-using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.TestTools;
 
-namespace Spark2D.Tests.Core.Generators {
+namespace Spark2D.Tests.Core.Meshers {
     public class QuadsMesherTests {
         private QuadsMesher _quadsMesher;
-        private float2[] _testPositions;
+        private Vector2[] _testPositions;
         private float[] _testRotations;
         private float[] _testScales;
-        private float4[] _testColors;
+        private Color[] _testColors;
         private int _capacity = 10;
 
         [SetUp]
         public void Setup() {
             // Create test positions for each test
-            _testPositions = new float2[] {
-                new float2(0, 0),
-                new float2(1, 1),
-                new float2(2, 0),
-                new float2(3, 1),
-                new float2(4, 0)
+            _testPositions = new Vector2[] {
+                new Vector2(0, 0),
+                new Vector2(1, 1),
+                new Vector2(2, 0),
+                new Vector2(3, 1),
+                new Vector2(4, 0)
             };
 
             // Create test rotations
@@ -35,12 +33,12 @@ namespace Spark2D.Tests.Core.Generators {
             };
 
             // Create test colors
-            _testColors = new float4[] {
-                new float4(1, 0, 0, 1), // Red
-                new float4(0, 1, 0, 1), // Green
-                new float4(0, 0, 1, 1), // Blue
-                new float4(1, 1, 0, 1), // Yellow
-                new float4(1, 0, 1, 1) // Magenta
+            _testColors = new Color[] {
+                new Color(1, 0, 0, 1), // Red
+                new Color(0, 1, 0, 1), // Green
+                new Color(0, 0, 1, 1), // Blue
+                new Color(1, 1, 0, 1), // Yellow
+                new Color(1, 0, 1, 1) // Magenta
             };
 
             // Create a new QuadsMesher with the test data
@@ -76,7 +74,7 @@ namespace Spark2D.Tests.Core.Generators {
         [Test]
         public void Generate_CreatesCorrectNumberOfQuads() {
             // Generate the mesh
-            _quadsMesher.Generate();
+            _quadsMesher.Make();
 
             // The number of active quads should be the minimum of capacity and positions length
             int expectedActiveQuads = Mathf.Min(_capacity, _testPositions.Length);
@@ -96,13 +94,13 @@ namespace Spark2D.Tests.Core.Generators {
         [Test]
         public void Generate_AppliesCorrectTransformations() {
             // Generate the mesh
-            _quadsMesher.Generate();
+            _quadsMesher.Make();
 
             // Check the first quad (4 vertices)
             Vector3[] vertices = _quadsMesher.Mesh.vertices;
 
             // Get the expected position, rotation, and scale for the first quad
-            float2 position = _testPositions[0];
+            var position = _testPositions[0];
             float rotation = _testRotations[0] * Mathf.Deg2Rad;
             float scale = _testScales[0];
 
@@ -112,8 +110,8 @@ namespace Spark2D.Tests.Core.Generators {
             float cos = Mathf.Cos(rotation);
 
             // Bottom-left corner calculation
-            float2 bl = new float2(-halfSize, -halfSize);
-            bl = new float2(bl.x * cos - bl.y * sin, bl.x * sin + bl.y * cos);
+            var bl = new Vector2(-halfSize, -halfSize);
+            bl = new Vector2(bl.x * cos - bl.y * sin, bl.x * sin + bl.y * cos);
             Vector3 expectedBL = new Vector3(position.x + bl.x, position.y + bl.y, 0);
 
             // Check if the actual vertex position matches the expected
@@ -123,15 +121,15 @@ namespace Spark2D.Tests.Core.Generators {
         [Test]
         public void Generate_AppliesCorrectColors() {
             // Generate the mesh
-            _quadsMesher.Generate();
+            _quadsMesher.Make();
 
             // Check if the colors were applied correctly
             Color[] colors = _quadsMesher.Mesh.colors;
             Assert.IsNotNull(colors, "Colors array should not be null");
 
             // Get the expected color for the first quad
-            float4 expectedColor = _testColors[0];
-            Color expected = new Color(expectedColor.x, expectedColor.y, expectedColor.z, expectedColor.w);
+            var expectedColor = _testColors[0];
+            Color expected = new Color(expectedColor.r, expectedColor.g, expectedColor.b, expectedColor.a);
 
             // All four vertices of the first quad should have the same color
             Assert.AreEqual(expected, colors[0], "Vertex 0 color does not match expected");
@@ -157,7 +155,7 @@ namespace Spark2D.Tests.Core.Generators {
             var mesher = new QuadsMesher(_capacity, _testPositions, null, _testScales, _testColors);
 
             // Should not throw an exception
-            Assert.DoesNotThrow(() => mesher.Generate());
+            Assert.DoesNotThrow(() => mesher.Make());
 
             // Cleanup
             UnityEngine.Object.DestroyImmediate(mesher.Mesh);
@@ -169,7 +167,7 @@ namespace Spark2D.Tests.Core.Generators {
             var mesher = new QuadsMesher(_capacity, _testPositions, _testRotations, null, _testColors);
 
             // Should not throw an exception
-            Assert.DoesNotThrow(() => mesher.Generate());
+            Assert.DoesNotThrow(() => mesher.Make());
 
             // Cleanup
             UnityEngine.Object.DestroyImmediate(mesher.Mesh);
@@ -181,7 +179,7 @@ namespace Spark2D.Tests.Core.Generators {
             var mesher = new QuadsMesher(_capacity, _testPositions, _testRotations, _testScales, null);
 
             // Should not throw an exception
-            Assert.DoesNotThrow(() => mesher.Generate());
+            Assert.DoesNotThrow(() => mesher.Make());
 
             // Cleanup
             UnityEngine.Object.DestroyImmediate(mesher.Mesh);
@@ -192,13 +190,13 @@ namespace Spark2D.Tests.Core.Generators {
             // Create arrays with fewer elements than positions
             float[] shortRotations = new float[] { 45 };
             float[] shortScales = new float[] { 2 };
-            float4[] shortColors = new float4[] { new float4(1, 1, 1, 1) };
+            Color[] shortColors = new Color[] { new Color(1, 1, 1, 1) };
 
             // Create a mesher with shorter arrays
             var mesher = new QuadsMesher(_capacity, _testPositions, shortRotations, shortScales, shortColors);
 
             // Should not throw an exception
-            Assert.DoesNotThrow(() => mesher.Generate());
+            Assert.DoesNotThrow(() => mesher.Make());
 
             // Cleanup
             UnityEngine.Object.DestroyImmediate(mesher.Mesh);
@@ -211,7 +209,7 @@ namespace Spark2D.Tests.Core.Generators {
             var mesher = new QuadsMesher(largeCapacity, _testPositions, _testRotations, _testScales, _testColors);
 
             // Generate mesh
-            mesher.Generate();
+            mesher.Make();
 
             // Count non-zero vertices
             int activeVertices = 0;

@@ -3,19 +3,54 @@ using UnityEngine.Rendering;
 using System;
 
 namespace Spark2D {
+    /// <summary>
+    /// API is designed for zero-allocation during Render() calls.
+    /// </summary>
     public class StampsRenderer {
         Mesh _mesh;
         Texture2D _stampTexture;
         RenderTexture _rt;
+        int _width;
+        int _height;
+
         Material _material;
-        Shader _shader;
         CommandBuffer _cmd;
         Color _clearColor = Color.clear;
         bool _autoClear = true;
-        float _orthoSize = 1.0f;
+
+        Vector2 _orthoSize = Vector2.one;
         Vector3 _cameraPosition = Vector3.zero;
         Matrix4x4 _transformMatrix = Matrix4x4.identity;
 
+        Matrix4x4 _projectionMatrix = Matrix4x4.identity;
+        Matrix4x4 _viewMatrix = Matrix4x4.identity;
+        bool _matricesDirty = true;
+
+        /// <summary>
+        /// Creates a new StampsRenderer with the specified mesh and stamp texture.
+        /// </summary>
+        public StampsRenderer(Mesh mesh, Texture2D stampTexture, int rtWidth = 128, int rtHeight = 128) {
+            _mesh = mesh;
+            _stampTexture = stampTexture;
+
+            SetupRenderTexture(rtWidth, rtHeight);
+
+            // Initialize shader and material
+            var shader = Shader.Find("Spark2D/StampShader");
+            if (shader == null) {
+                Debug.LogError("Failed to find Spark2D/StampShader shader. Make sure it's included in the project.");
+                return;
+            }
+
+            _material = new Material(shader);
+            _material.SetTexture("_MainTex", _stampTexture);
+
+            // Initialize command buffer
+            _cmd = new CommandBuffer();
+            _cmd.name = "StampsRenderer";
+        }
+
+        #region // MARK: - Properties
         /// <summary>
         /// Gets or sets the mesh to render.
         /// </summary>
@@ -45,6 +80,30 @@ namespace Spark2D {
             set { _rt = value; }
         }
 
+        public int Width {
+            get { return _width; }
+            set {
+                if (value <= 0)
+                    throw new Exception("Width must be greater than 0");
+                if (_width != value) {
+                    _width = value;
+                    SetupRenderTexture(_width, _height);
+                }
+            }
+        }
+
+        public int Height {
+            get { return _height; }
+            set {
+                if (value <= 0)
+                    throw new Exception("Height must be greater than 0");
+                if (_height != value) {
+                    _height = value;
+                    SetupRenderTexture(_width, _height);
+                }
+            }
+        }
+
         /// <summary>
         /// Gets or sets the clear color for the render texture.
         /// </summary>
@@ -64,12 +123,22 @@ namespace Spark2D {
         /// <summary>
         /// Gets or sets the orthographic size for rendering (controls the camera zoom).
         /// </summary>
-        public float OrthoSize {
+        public Vector2 OrthoSize {
             get { return _orthoSize; }
             set {
-                if (value <= 0)
+                if (value.x <= 0 || value.y <= 0)
                     throw new Exception("OrthoSize must be greater than 0");
-                _orthoSize = value;
+                if (_orthoSize != value) {
+                    _orthoSize = value;
+                    _matricesDirty = true;
+                }
+            }
+        }
+
+        public Vector2 Dimension {
+            get { return OrthoSize * 2f; }
+            set {
+                OrthoSize = value * 0.5f;
             }
         }
 
@@ -78,7 +147,12 @@ namespace Spark2D {
         /// </summary>
         public Vector3 CameraPosition {
             get { return _cameraPosition; }
-            set { _cameraPosition = value; }
+            set {
+                if (_cameraPosition != value) {
+                    _cameraPosition = value;
+                    _matricesDirty = true;
+                }
+            }
         }
 
         /// <summary>
@@ -88,31 +162,12 @@ namespace Spark2D {
             get { return _transformMatrix; }
             set { _transformMatrix = value; }
         }
+        #endregion
 
+        #region // MARK: - Public
         /// <summary>
-        /// Creates a new StampsRenderer with the specified mesh and stamp texture.
-        /// </summary>
-        public StampsRenderer(Mesh mesh, Texture2D stampTexture) {
-            _mesh = mesh;
-            _stampTexture = stampTexture;
-
-            // Initialize shader and material
-            _shader = Shader.Find("Spark2D/StampShader");
-            if (_shader == null) {
-                Debug.LogError("Failed to find Spark2D/StampShader shader. Make sure it's included in the project.");
-                return;
-            }
-
-            _material = new Material(_shader);
-            _material.SetTexture("_MainTex", _stampTexture);
-
-            // Initialize command buffer
-            _cmd = new CommandBuffer();
-            _cmd.name = "StampsRenderer";
-        }
-
-        /// <summary>
-        /// Sets up the RenderTexture with the specified dimensions and format.
+        /// Sets up the RenderTexture with the specified dimensions and format. New RenderTexture is created
+        /// only if needed, that is, if the current RenderTexture is null or has different dimensions or format.
         /// </summary>
         public void SetupRenderTexture(int width, int height, RenderTextureFormat format = RenderTextureFormat.ARGB32) {
             if (_rt == null || _rt.width != width || _rt.height != height || _rt.format != format) {
@@ -122,10 +177,11 @@ namespace Spark2D {
 
                 _rt = new RenderTexture(width, height, 0, format);
                 _rt.antiAliasing = 1;
-                _rt.filterMode = FilterMode.Bilinear;
-                _rt.wrapMode = TextureWrapMode.Clamp;
+                _rt.filterMode = FilterMode.Point;
                 _rt.Create();
             }
+            _width = width;
+            _height = height;
         }
 
         /// <summary>
@@ -210,6 +266,9 @@ namespace Spark2D {
                 return;
             }
 
+            // Update matrices if needed
+            UpdateMatrices();
+
             // Clear the command buffer
             _cmd.Clear();
 
@@ -221,11 +280,7 @@ namespace Spark2D {
                 _cmd.ClearRenderTarget(true, true, _clearColor);
             }
 
-            // Set up camera and view projection matrix for orthographic rendering
-            Matrix4x4 proj = Matrix4x4.Ortho(-_orthoSize, _orthoSize, -_orthoSize, _orthoSize, -1f, 1f);
-            Matrix4x4 view = Matrix4x4.TRS(_cameraPosition, Quaternion.identity, Vector3.one).inverse;
-
-            _cmd.SetViewProjectionMatrices(view, proj);
+            _cmd.SetViewProjectionMatrices(_viewMatrix, _projectionMatrix);
 
             // Draw the mesh with the material
             _cmd.DrawMesh(_mesh, _transformMatrix, _material);
@@ -269,7 +324,18 @@ namespace Spark2D {
                 _rt = null;
             }
         }
+        #endregion
 
+        // MARK: - Private
+        void UpdateMatrices() {
+            if (!_matricesDirty)
+                return;
+            _projectionMatrix = Matrix4x4.Ortho(-_orthoSize.x, _orthoSize.x, -_orthoSize.y, _orthoSize.y, -1f, 1f);
+            _viewMatrix = Matrix4x4.TRS(_cameraPosition, Quaternion.identity, Vector3.one).inverse;
+            _matricesDirty = false;
+        }
+
+        // MARK: - Types
         /// <summary>
         /// Blend modes that can be used for rendering.
         /// </summary>

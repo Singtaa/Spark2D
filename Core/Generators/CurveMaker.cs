@@ -1,6 +1,4 @@
-﻿using Unity.Mathematics;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using UnityEngine;
 
 namespace Spark2D {
@@ -21,15 +19,17 @@ namespace Spark2D {
 
     /// <summary>
     /// Creates Bezier curves from control points with configurable point distribution.
+    /// API is designed for zero-allocation during Generate() calls.
     /// </summary>
     public class CurveMaker {
         // Core data
-        float2[] _controlPoints;
-        float2[] _outputPoints;
+        Vector2[] _controlPoints;
+        Vector2[] _outputPoints;
 
         // Point generation settings
         int _count;
         float _spacing;
+        float _jitter;
         PointGenerationMode _pointGenerationMode;
         bool _evenSpacing;
 
@@ -39,7 +39,7 @@ namespace Spark2D {
 
         // Arc length parameterization cache
         int _sampleCount;
-        float2[] _cachedSamplePoints;
+        Vector2[] _cachedSamplePoints;
         float[] _cachedArcLengths;
         float _cachedTotalLength;
         bool _cacheValid;
@@ -47,23 +47,52 @@ namespace Spark2D {
         const int _minSampleCount = 100; // Absolute minimum sample count
 
         /// <summary>
+        /// Creates a new curve maker with the specified control points and generation parameters.
+        /// </summary>
+        /// <param name="controlPoints">The control points defining the Bezier curve.</param>
+        /// <param name="count">The number of points to generate when using Count mode.</param>
+        /// <param name="spacing">The distance between points when using Spacing mode.</param>
+        /// <param name="mode">The mode determining how points are distributed.</param>
+        /// <param name="evenSpacing">Whether to distribute points evenly along the curve's arc length.</param>
+        public CurveMaker(
+            Vector2[] controlPoints,
+            int count = 20,
+            float spacing = 0.1f,
+            float jitter = 0f,
+            PointGenerationMode mode = PointGenerationMode.Count,
+            bool evenSpacing = true) {
+            // Set initial values
+            _count = 0; // Will be set by Count property
+            _spacing = spacing;
+            _jitter = jitter;
+            _pointGenerationMode = mode;
+            _evenSpacing = evenSpacing;
+            _sampleCount = 0; // Will be set by Count property
+
+            // Initialize properties (which will handle array allocation)
+            Count = count;
+            ControlPoints = controlPoints;
+        }
+
+        #region // MARK: - Properties
+        /// <summary>
         /// Gets or sets the control points defining the Bezier curve.
         /// </summary>
-        public IReadOnlyList<float2> ControlPoints {
+        public Vector2[] ControlPoints {
             get => _controlPoints;
             set {
-                if (value == null || value.Count < 2)
+                if (value == null || value.Length < 2)
                     throw new ArgumentException("Control points must have at least 2 points");
 
                 // Resize arrays only when needed
-                if (_controlPoints == null || _controlPoints.Length != value.Count) {
-                    _controlPoints = new float2[value.Count];
-                    _tempX = new float[value.Count];
-                    _tempY = new float[value.Count];
+                if (_controlPoints == null || _controlPoints.Length != value.Length) {
+                    _controlPoints = new Vector2[value.Length];
+                    _tempX = new float[value.Length];
+                    _tempY = new float[value.Length];
                 }
 
                 // Copy control points
-                for (int i = 0; i < value.Count; i++) {
+                for (int i = 0; i < value.Length; i++) {
                     _controlPoints[i] = value[i];
                 }
 
@@ -74,7 +103,7 @@ namespace Spark2D {
         /// <summary>
         /// Gets the generated curve points. Available after calling Generate().
         /// </summary>
-        public IReadOnlyList<float2> OutputPoints => _outputPoints;
+        public Vector2[] OutputPoints => _outputPoints;
 
         /// <summary>
         /// Gets or sets the number of points to generate when using Count mode.
@@ -90,7 +119,7 @@ namespace Spark2D {
 
                     // Only allocate new output array if in Count mode
                     if (_pointGenerationMode == PointGenerationMode.Count) {
-                        _outputPoints = new float2[value];
+                        _outputPoints = new Vector2[value];
                     }
 
                     // Calculate new sample count based on output point count
@@ -99,7 +128,7 @@ namespace Spark2D {
                     // Only reallocate sample arrays if needed
                     if (newSampleCount != _sampleCount) {
                         _sampleCount = newSampleCount;
-                        _cachedSamplePoints = new float2[_sampleCount];
+                        _cachedSamplePoints = new Vector2[_sampleCount];
                         _cachedArcLengths = new float[_sampleCount];
                     }
 
@@ -127,6 +156,20 @@ namespace Spark2D {
         }
 
         /// <summary>
+        /// Gets or sets the maximum random displacement radius for each generated point.
+        /// A value of 0 means no jitter is applied.
+        /// </summary>
+        public float Jitter {
+            get => _jitter;
+            set {
+                if (value < 0)
+                    throw new ArgumentException("Jitter must be non-negative");
+
+                _jitter = value;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets whether to use count or spacing to determine point distribution.
         /// </summary>
         public PointGenerationMode PointGenerationMode {
@@ -137,7 +180,7 @@ namespace Spark2D {
 
                     // When changing modes, we may need to resize the output array
                     if (value == PointGenerationMode.Count && (_outputPoints == null || _outputPoints.Length != _count)) {
-                        _outputPoints = new float2[_count];
+                        _outputPoints = new Vector2[_count];
                     }
 
                     _cacheValid = false;
@@ -153,38 +196,14 @@ namespace Spark2D {
             get => _evenSpacing;
             set => _evenSpacing = value;
         }
+        #endregion
 
-        /// <summary>
-        /// Creates a new curve maker with the specified control points and generation parameters.
-        /// </summary>
-        /// <param name="controlPoints">The control points defining the Bezier curve.</param>
-        /// <param name="count">The number of points to generate when using Count mode.</param>
-        /// <param name="spacing">The distance between points when using Spacing mode.</param>
-        /// <param name="mode">The mode determining how points are distributed.</param>
-        /// <param name="evenSpacing">Whether to distribute points evenly along the curve's arc length.</param>
-        public CurveMaker(
-            float2[] controlPoints,
-            int count = 20,
-            float spacing = 1.0f,
-            PointGenerationMode mode = PointGenerationMode.Count,
-            bool evenSpacing = true) {
-            // Set initial values
-            _count = 0; // Will be set by Count property
-            _spacing = spacing;
-            _pointGenerationMode = mode;
-            _evenSpacing = evenSpacing;
-            _sampleCount = 0; // Will be set by Count property
-
-            // Initialize properties (which will handle array allocation)
-            Count = count;
-            ControlPoints = controlPoints;
-        }
-
+        #region // MARK: - Public
         /// <summary>
         /// Calculates a single point on the Bezier curve at parameter t (0 to 1).
         /// </summary>
-        public float2 ComputePoint(float t) {
-            t = math.clamp(t, 0, 1);
+        public Vector2 ComputePoint(float t) {
+            t = Mathf.Clamp01(t);
 
             // Copy control points to temp arrays
             for (int k = 0; k < _controlPoints.Length; k++) {
@@ -195,12 +214,12 @@ namespace Spark2D {
             // Apply De Casteljau's algorithm
             for (int j = _controlPoints.Length - 1; j > 0; j--) {
                 for (int k = 0; k < j; k++) {
-                    _tempX[k] = math.lerp(_tempX[k], _tempX[k + 1], t);
-                    _tempY[k] = math.lerp(_tempY[k], _tempY[k + 1], t);
+                    _tempX[k] = Mathf.Lerp(_tempX[k], _tempX[k + 1], t);
+                    _tempY[k] = Mathf.Lerp(_tempY[k], _tempY[k + 1], t);
                 }
             }
 
-            return new float2(_tempX[0], _tempY[0]);
+            return new Vector2(_tempX[0], _tempY[0]);
         }
 
         /// <summary>
@@ -231,7 +250,7 @@ namespace Spark2D {
 
                 // Resize output array if needed
                 if (_outputPoints == null || _outputPoints.Length != pointCount) {
-                    _outputPoints = new float2[pointCount];
+                    _outputPoints = new Vector2[pointCount];
                 }
             }
 
@@ -241,8 +260,22 @@ namespace Spark2D {
             } else {
                 GenerateUniformParameter(pointCount);
             }
+
+            ApplyJitter();
         }
 
+        /// <summary>
+        /// Gets the total length of the curve.
+        /// </summary>
+        public float GetTotalLength() {
+            if (!UpdateCache())
+                return 0;
+
+            return _cachedTotalLength;
+        }
+        #endregion
+
+        #region // MARK: - Private
         /// <summary>
         /// Internal method to generate points with uniform parameter spacing.
         /// </summary>
@@ -283,9 +316,9 @@ namespace Spark2D {
         /// <summary>
         /// Gets a point on the curve at a specific arc length from the start.
         /// </summary>
-        float2 GetPointAtArcLength(float targetArcLength) {
+        Vector2 GetPointAtArcLength(float targetArcLength) {
             // Clamp to the curve length
-            targetArcLength = math.clamp(targetArcLength, 0, _cachedTotalLength);
+            targetArcLength = Mathf.Clamp(targetArcLength, 0, _cachedTotalLength);
 
             // Binary search to find the segment containing target arc length
             int low = 0;
@@ -316,19 +349,9 @@ namespace Spark2D {
 
             // Calculate interpolation factor and parameter value
             float factor = (targetArcLength - lowArcLength) / segmentLength;
-            float t = math.lerp(low / (float)(_sampleCount - 1), high / (float)(_sampleCount - 1), factor);
+            float t = Mathf.Lerp(low / (float)(_sampleCount - 1), high / (float)(_sampleCount - 1), factor);
 
             return ComputePoint(t);
-        }
-
-        /// <summary>
-        /// Gets the total length of the curve.
-        /// </summary>
-        public float GetTotalLength() {
-            if (!UpdateCache())
-                return 0;
-
-            return _cachedTotalLength;
         }
 
         /// <summary>
@@ -339,7 +362,7 @@ namespace Spark2D {
             if (_controlPoints == null || _controlPoints.Length < 2) return false;
 
             float totalLength = 0;
-            float2 prevPoint = ComputePoint(0);
+            Vector2 prevPoint = ComputePoint(0);
             _cachedSamplePoints[0] = prevPoint;
             _cachedArcLengths[0] = 0;
 
@@ -347,10 +370,10 @@ namespace Spark2D {
 
             for (int i = 1; i < _sampleCount; i++) {
                 float t = i * step;
-                float2 currentPoint = ComputePoint(t);
+                Vector2 currentPoint = ComputePoint(t);
                 _cachedSamplePoints[i] = currentPoint;
 
-                float segmentLength = math.distance(prevPoint, currentPoint);
+                float segmentLength = Vector2.Distance(prevPoint, currentPoint);
                 totalLength += segmentLength;
                 _cachedArcLengths[i] = totalLength;
 
@@ -361,5 +384,31 @@ namespace Spark2D {
             _cacheValid = true;
             return true;
         }
+
+        /// <summary>
+        /// Applies random displacement to generated points within the jitter radius.
+        /// </summary>
+        void ApplyJitter() {
+            if (_jitter <= 0 || _outputPoints == null)
+                return;
+
+            for (int i = 0; i < _outputPoints.Length; i++) {
+                // Skip first and last points to preserve curve endpoints
+                if (i == 0 || i == _outputPoints.Length - 1)
+                    continue;
+
+                // Generate random displacement within the jitter radius
+                float angle = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
+                float distance = UnityEngine.Random.Range(0f, _jitter);
+
+                Vector2 offset = new Vector2(
+                    Mathf.Cos(angle) * distance,
+                    Mathf.Sin(angle) * distance
+                );
+
+                _outputPoints[i] += offset;
+            }
+        }
+        #endregion
     }
 }
