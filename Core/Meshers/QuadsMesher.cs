@@ -25,7 +25,7 @@ namespace Spark2D {
         /// <param name="rotations">Initial rotations for each quad (in degrees). Can be null.</param>
         /// <param name="scales">Initial scales for each quad. Can be null.</param>
         /// <param name="colors">Initial colors for each quad. Can be null.</param>
-        public QuadsMesher(int capacity, Vector2[] positions, float[] rotations = null, float[] scales = null, Color[] colors = null) {
+        public QuadsMesher(int capacity, Vector2[] positions = null, float[] rotations = null, float[] scales = null, Color[] colors = null) {
             if (capacity <= 0)
                 throw new Exception("Capacity must be greater than 0");
 
@@ -44,6 +44,17 @@ namespace Spark2D {
         /// Gets the internal mesh that contains the generated quads.
         /// </summary>
         public Mesh Mesh => _mesh;
+
+        public int Capacity {
+            get { return _capacity; }
+            set {
+                if (value <= 0)
+                    throw new Exception("Capacity must be greater than 0");
+
+                _capacity = value;
+                InitializeMesh();
+            }
+        }
 
         /// <summary>
         /// Gets or sets the positions for each quad.
@@ -66,7 +77,9 @@ namespace Spark2D {
         /// </summary>
         public float[] Scales {
             get { return _scales; }
-            set { _scales = value; }
+            set {
+                _scales = value;
+            }
         }
 
         /// <summary>
@@ -80,7 +93,7 @@ namespace Spark2D {
 
         #region // MARK: - Public 
         public void Make() {
-            if (_mesh == null || _positions == null || _positions.Length == 0)
+            if (_positions == null || _positions.Length == 0)
                 return;
 
             // Calculate how many quads we can create

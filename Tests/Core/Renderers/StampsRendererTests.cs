@@ -63,7 +63,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void Constructor_ValidInputs_InitializesCorrectly() {
             // Arrange & Act
-            StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
 
             // Assert
             Assert.IsNotNull(renderer);
@@ -74,7 +74,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void SetupRenderTexture_ValidParameters_CreatesRenderTexture() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
 
             // Act
             renderer.SetupRenderTexture(256, 256);
@@ -92,7 +92,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void Properties_SetAndGet_WorksCorrectly() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
 
             // Act & Assert - Test each property
 
@@ -139,7 +139,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void OrthoSize_ZeroOrNegative_ThrowsException() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
 
             // Act & Assert
             Assert.Throws<System.Exception>(() => renderer.OrthoSize = Vector2.zero);
@@ -152,7 +152,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [UnityTest]
         public IEnumerator Render_ValidInputs_RendersToTexture() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
             renderer.SetupRenderTexture(256, 256);
 
             // Act
@@ -194,7 +194,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void Dispose_AfterUse_ReleasesResources() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
             renderer.SetupRenderTexture(256, 256);
 
             // Act - use the renderer then dispose it
@@ -208,7 +208,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void Render_NullResources_LogsError() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(null, null);
+            StampsRenderer renderer = new StampsRenderer();
 
             // Act & Assert - Should log an error but not throw an exception
             LogAssert.Expect(LogType.Error, "Cannot render: missing required resources.");
@@ -221,7 +221,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [UnityTest]
         public IEnumerator Render_DifferentBlendModes_ProduceDifferentResults() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(_testMesh, _testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
             renderer.SetupRenderTexture(256, 256);
 
             // Use colored background and tint to make blend differences visible

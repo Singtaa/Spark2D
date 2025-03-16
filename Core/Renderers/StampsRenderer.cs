@@ -29,7 +29,7 @@ namespace Spark2D {
         /// <summary>
         /// Creates a new StampsRenderer with the specified mesh and stamp texture.
         /// </summary>
-        public StampsRenderer(Mesh mesh, Texture2D stampTexture, int rtWidth = 128, int rtHeight = 128) {
+        public StampsRenderer(int rtWidth = 128, int rtHeight = 128, Mesh mesh = null, Texture2D stampTexture = null) {
             _mesh = mesh;
             _stampTexture = stampTexture;
 
@@ -218,8 +218,8 @@ namespace Spark2D {
             // First, set blend mode parameters
             switch (blendMode) {
                 case BlendMode.Normal:
-                    _material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                    _material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    _material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                    _material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
                     break;
                 case BlendMode.Additive:
                     _material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);

@@ -52,10 +52,11 @@ namespace Spark2D {
         /// <param name="controlPoints">The control points defining the Bezier curve.</param>
         /// <param name="count">The number of points to generate when using Count mode.</param>
         /// <param name="spacing">The distance between points when using Spacing mode.</param>
+        /// <param name="jitter">The maximum random displacement radius for each generated point.</param>
         /// <param name="mode">The mode determining how points are distributed.</param>
         /// <param name="evenSpacing">Whether to distribute points evenly along the curve's arc length.</param>
         public CurveMaker(
-            Vector2[] controlPoints,
+            Vector2[] controlPoints = null,
             int count = 20,
             float spacing = 0.1f,
             float jitter = 0f,
@@ -71,7 +72,7 @@ namespace Spark2D {
 
             // Initialize properties (which will handle array allocation)
             Count = count;
-            ControlPoints = controlPoints;
+            ControlPoints = controlPoints == null ? new[] { new Vector2(-1, 0), new Vector2(1, 0) } : controlPoints;
         }
 
         #region // MARK: - Properties
@@ -182,6 +183,11 @@ namespace Spark2D {
                     if (value == PointGenerationMode.Count && (_outputPoints == null || _outputPoints.Length != _count)) {
                         _outputPoints = new Vector2[_count];
                     }
+                    // if (value == PointGenerationMode.Spacing) {
+                    //     UpdateCache();
+                    //     var pointCount = Math.Max(2, (int)Math.Ceiling(_cachedTotalLength / _spacing) + 1);
+                    //     _outputPoints = new Vector2[pointCount];
+                    // }
 
                     _cacheValid = false;
                 }
