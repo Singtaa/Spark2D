@@ -63,7 +63,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void Constructor_ValidInputs_InitializesCorrectly() {
             // Arrange & Act
-            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh: _testMesh, stampTexture: _testTexture);
 
             // Assert
             Assert.IsNotNull(renderer);
@@ -74,7 +74,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void SetupRenderTextures_ValidParameters_CreatesRenderTexture() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh: _testMesh, stampTexture: _testTexture);
 
             // Act
             renderer.SetupRenderTextures(256, 256);
@@ -92,7 +92,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void Properties_SetAndGet_WorksCorrectly() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh: _testMesh, stampTexture: _testTexture);
 
             // Act & Assert - Test each property
 
@@ -139,7 +139,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void OrthoSize_ZeroOrNegative_ThrowsException() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh: _testMesh, stampTexture: _testTexture);
 
             // Act & Assert
             Assert.Throws<System.Exception>(() => renderer.OrthoSize = Vector2.zero);
@@ -152,7 +152,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [UnityTest]
         public IEnumerator Render_ValidInputs_RendersToTexture() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh: _testMesh, stampTexture: _testTexture);
             renderer.SetupRenderTextures(256, 256);
 
             // Act
@@ -194,7 +194,7 @@ namespace Spark2D.Tests.Core.Renderers {
         [Test]
         public void Dispose_AfterUse_ReleasesResources() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
+            StampsRenderer renderer = new StampsRenderer(mesh: _testMesh, stampTexture: _testTexture);
             renderer.SetupRenderTextures(256, 256);
 
             // Act - use the renderer then dispose it
@@ -221,61 +221,123 @@ namespace Spark2D.Tests.Core.Renderers {
         [UnityTest]
         public IEnumerator Render_DifferentBlendModes_ProduceDifferentResults() {
             // Arrange
-            StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
-            renderer.SetupRenderTextures(256, 256);
+            int textureSize = 256;
+            StampsRenderer renderer = new StampsRenderer(textureSize, textureSize, _testMesh, _testTexture);
 
-            // Use colored background and tint to make blend differences visible
+            // Create textures to store results for each blend mode
+            Texture2D normalResult = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+            Texture2D additiveResult = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+            Texture2D multiplyResult = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+            Texture2D screenResult = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+
+            // Setup test scenario - use distinct colors for clear and mesh
             Color backgroundColor = new Color(0.2f, 0.2f, 0.5f, 1.0f);
-            renderer.SetColor("_Color", Color.red);
+            Color stampColor = new Color(0.8f, 0.2f, 0.2f, 0.7f);
+            renderer.SetColor("_Color", stampColor);
             renderer.ClearColor = backgroundColor;
 
-            // First render with Normal blend
-            renderer.SetBlendMode(StampsRenderer.BlendMode.Normal);
-            renderer.Render(true);
-            yield return null;
+            try {
+                // Test each blend mode independently
+                // 1. Normal blend
+                renderer.SetBlendMode(StampsRenderer.BlendMode.Normal);
+                renderer.Render(true); // Clear and render
+                yield return null; // Wait for render to complete
+                CaptureRenderTexture(renderer.RenderTexture, normalResult);
 
-            // Capture Normal blend result
-            Texture2D normalBlendResult = new Texture2D(256, 256, TextureFormat.RGBA32, false);
-            RenderTexture.active = renderer.RenderTexture;
-            normalBlendResult.ReadPixels(new Rect(0, 0, 256, 256), 0, 0);
-            normalBlendResult.Apply();
-            RenderTexture.active = null;
+                // 2. Additive blend
+                renderer.SetBlendMode(StampsRenderer.BlendMode.Additive);
+                renderer.Render(true);
+                yield return null;
+                CaptureRenderTexture(renderer.RenderTexture, additiveResult);
 
-            // Now render with Additive blend
-            renderer.SetBlendMode(StampsRenderer.BlendMode.Additive);
-            renderer.Render(true);
-            yield return null;
+                // 3. Multiply blend
+                renderer.SetBlendMode(StampsRenderer.BlendMode.Multiply);
+                renderer.Render(true);
+                yield return null;
+                CaptureRenderTexture(renderer.RenderTexture, multiplyResult);
 
-            // Capture Additive blend result
-            Texture2D additiveBlendResult = new Texture2D(256, 256, TextureFormat.RGBA32, false);
-            RenderTexture.active = renderer.RenderTexture;
-            additiveBlendResult.ReadPixels(new Rect(0, 0, 256, 256), 0, 0);
-            additiveBlendResult.Apply();
-            RenderTexture.active = null;
+                // 4. Screen blend
+                renderer.SetBlendMode(StampsRenderer.BlendMode.Screen);
+                renderer.Render(true);
+                yield return null;
+                CaptureRenderTexture(renderer.RenderTexture, screenResult);
 
-            // Compare the results
-            Color[] normalPixels = normalBlendResult.GetPixels();
-            Color[] additivePixels = additiveBlendResult.GetPixels();
+                // Verify results - compare each blend mode against others
+                Assert.IsTrue(ImagesAreDifferent(normalResult, additiveResult),
+                    "Normal and Additive blend modes should produce different results");
 
-            bool pixelsDiffer = false;
-            for (int i = 0; i < normalPixels.Length; i++) {
-                float diffR = Mathf.Abs(normalPixels[i].r - additivePixels[i].r);
-                float diffG = Mathf.Abs(normalPixels[i].g - additivePixels[i].g);
-                float diffB = Mathf.Abs(normalPixels[i].b - additivePixels[i].b);
-                float diffA = Mathf.Abs(normalPixels[i].a - additivePixels[i].a);
+                Assert.IsTrue(ImagesAreDifferent(normalResult, multiplyResult),
+                    "Normal and Multiply blend modes should produce different results");
 
-                if (diffR > 0.01f || diffG > 0.01f || diffB > 0.01f || diffA > 0.01f) {
-                    pixelsDiffer = true;
-                    break;
+                Assert.IsTrue(ImagesAreDifferent(normalResult, screenResult),
+                    "Normal and Screen blend modes should produce different results");
+
+                Assert.IsTrue(ImagesAreDifferent(additiveResult, multiplyResult),
+                    "Additive and Multiply blend modes should produce different results");
+
+                Assert.IsTrue(ImagesAreDifferent(additiveResult, screenResult),
+                    "Additive and Screen blend modes should produce different results");
+
+                Assert.IsTrue(ImagesAreDifferent(multiplyResult, screenResult),
+                    "Multiply and Screen blend modes should produce different results");
+            } finally {
+                // Cleanup
+                Object.DestroyImmediate(normalResult);
+                Object.DestroyImmediate(additiveResult);
+                Object.DestroyImmediate(multiplyResult);
+                Object.DestroyImmediate(screenResult);
+                renderer.Dispose();
+            }
+        }
+
+        // Helper method to copy from RenderTexture to Texture2D
+        private void CaptureRenderTexture(RenderTexture source, Texture2D destination) {
+            RenderTexture prevActive = RenderTexture.active;
+            RenderTexture.active = source;
+
+            destination.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+            destination.Apply();
+
+            RenderTexture.active = prevActive;
+        }
+
+        // Helper method to determine if two textures have significantly different pixels
+        private bool ImagesAreDifferent(Texture2D a, Texture2D b) {
+            if (a.width != b.width || a.height != b.height)
+                return true;
+
+            Color[] pixelsA = a.GetPixels();
+            Color[] pixelsB = b.GetPixels();
+
+            // Check the center area of the texture where differences are most likely to be visible
+            int centerX = a.width / 2;
+            int centerY = a.height / 2;
+            int checkRadius = Mathf.Min(a.width, a.height) / 4;
+            float threshold = 0.05f; // Minimum difference to consider pixels different
+            int significantDifferenceCount = 0;
+            int requiredDifferentPixels = 10; // Require this many pixels to be different
+
+            // Sample a grid of pixels in the center area
+            for (int y = centerY - checkRadius; y < centerY + checkRadius; y += 4) {
+                for (int x = centerX - checkRadius; x < centerX + checkRadius; x += 4) {
+                    int index = y * a.width + x;
+                    if (index >= 0 && index < pixelsA.Length) {
+                        float diffR = Mathf.Abs(pixelsA[index].r - pixelsB[index].r);
+                        float diffG = Mathf.Abs(pixelsA[index].g - pixelsB[index].g);
+                        float diffB = Mathf.Abs(pixelsA[index].b - pixelsB[index].b);
+
+                        // Consider different if any channel differs significantly
+                        if (diffR > threshold || diffG > threshold || diffB > threshold) {
+                            significantDifferenceCount++;
+
+                            if (significantDifferenceCount >= requiredDifferentPixels)
+                                return true;
+                        }
+                    }
                 }
             }
 
-            Assert.IsTrue(pixelsDiffer, "Different blend modes should produce different visual results");
-
-            // Cleanup
-            Object.DestroyImmediate(normalBlendResult);
-            Object.DestroyImmediate(additiveBlendResult);
-            renderer.Dispose();
+            return false;
         }
     }
 }

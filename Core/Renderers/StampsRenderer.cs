@@ -30,6 +30,9 @@ namespace Spark2D {
         bool _matricesDirty = true;
 
         Mesh _fullscreenQuad;
+        
+        // Add a field to track the current blend mode
+        BlendMode _currentBlendMode = BlendMode.Normal;
 
         /// <summary>
         /// Creates a new StampsRenderer with the specified mesh and stamp texture.
@@ -186,6 +189,13 @@ namespace Spark2D {
             get { return _transformMatrix; }
             set { _transformMatrix = value; }
         }
+        
+        /// <summary>
+        /// Gets the current blend mode.
+        /// </summary>
+        public BlendMode CurrentBlendMode {
+            get { return _currentBlendMode; }
+        }
         #endregion
 
         #region // MARK: - Public
@@ -248,24 +258,34 @@ namespace Spark2D {
             }
         }
 
+        /// <summary>
+        /// Sets the blend mode for rendering.
+        /// </summary>
         public void SetBlendMode(BlendMode blendMode) {
-            // In the two-stage approach, blend modes are handled differently
-            // We keep this method for compatibility but with modified behavior
+            _currentBlendMode = blendMode;
             
-            // Adjust intensity or other parameters if needed based on blend mode
+            // Apply blend-specific settings
             switch (blendMode) {
                 case BlendMode.Normal:
-                    // Default behavior
+                    SetIntensity(1.0f);
                     break;
+                    
                 case BlendMode.Additive:
-                    // Could adjust intensity or other parameters
+                    SetIntensity(1.0f);
                     break;
+                    
                 case BlendMode.Multiply:
-                    // Could use a different accumulation technique
+                    SetIntensity(0.5f); // Reduce intensity for multiply blend mode
                     break;
+                    
                 case BlendMode.Screen:
-                    // Could use a different accumulation technique
+                    SetIntensity(0.7f); // Adjust intensity for screen blend mode
                     break;
+            }
+            
+            // Set blend mode on the compositing material if it exists
+            if (_compositingMaterial != null) {
+                _compositingMaterial.SetFloat("_BlendMode", (float)blendMode);
             }
         }
 
@@ -325,6 +345,9 @@ namespace Spark2D {
             // Set the accumulated texture for compositing
             _compositingMaterial.SetTexture("_AccumTex", _accumRT);
             _compositingMaterial.SetTexture("_BackgroundTex", _rt);
+            
+            // Ensure the blend mode is set correctly
+            _compositingMaterial.SetFloat("_BlendMode", (float)_currentBlendMode);
 
             // Draw a fullscreen quad with the compositing material
             _cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
