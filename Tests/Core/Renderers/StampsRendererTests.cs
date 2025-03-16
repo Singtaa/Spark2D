@@ -72,12 +72,12 @@ namespace Spark2D.Tests.Core.Renderers {
         }
 
         [Test]
-        public void SetupRenderTexture_ValidParameters_CreatesRenderTexture() {
+        public void SetupRenderTextures_ValidParameters_CreatesRenderTexture() {
             // Arrange
             StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
 
             // Act
-            renderer.SetupRenderTexture(256, 256);
+            renderer.SetupRenderTextures(256, 256);
 
             // Assert
             Assert.IsNotNull(renderer.RenderTexture);
@@ -153,7 +153,7 @@ namespace Spark2D.Tests.Core.Renderers {
         public IEnumerator Render_ValidInputs_RendersToTexture() {
             // Arrange
             StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
-            renderer.SetupRenderTexture(256, 256);
+            renderer.SetupRenderTextures(256, 256);
 
             // Act
             renderer.Render(Color.clear);
@@ -195,7 +195,7 @@ namespace Spark2D.Tests.Core.Renderers {
         public void Dispose_AfterUse_ReleasesResources() {
             // Arrange
             StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
-            renderer.SetupRenderTexture(256, 256);
+            renderer.SetupRenderTextures(256, 256);
 
             // Act - use the renderer then dispose it
             renderer.Render();
@@ -222,7 +222,7 @@ namespace Spark2D.Tests.Core.Renderers {
         public IEnumerator Render_DifferentBlendModes_ProduceDifferentResults() {
             // Arrange
             StampsRenderer renderer = new StampsRenderer(mesh:_testMesh, stampTexture:_testTexture);
-            renderer.SetupRenderTexture(256, 256);
+            renderer.SetupRenderTextures(256, 256);
 
             // Use colored background and tint to make blend differences visible
             Color backgroundColor = new Color(0.2f, 0.2f, 0.5f, 1.0f);
