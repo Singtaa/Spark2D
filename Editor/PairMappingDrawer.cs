@@ -22,13 +22,14 @@ namespace Spark2D.Editor {
                 EditorGUI.LabelField(rect, new GUIContent(pairMapping.label, property.tooltip), style);
                 rect.x += itemWidth;
             }
+            rect.width = itemWidth * 0.5f;
             EditorGUI.PropertyField(rect, property.FindPropertyRelative(pairMapping.@from), GUIContent.none);
-            rect.x += itemWidth;
+            rect.x += itemWidth * 0.5f;
             rect.width = signWidth;
             style.alignment = TextAnchor.MiddleCenter;
             EditorGUI.LabelField(rect, pairMapping.separator, style);
             rect.x += signWidth;
-            rect.width = itemWidth;
+            rect.width = itemWidth * 1.5f;
             EditorGUI.PropertyField(rect, property.FindPropertyRelative(pairMapping.to), GUIContent.none);
 
             EditorGUI.indentLevel = indent;

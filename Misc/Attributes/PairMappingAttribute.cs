@@ -7,7 +7,7 @@ namespace Spark2D {
         public readonly string separator;
         public readonly string label;
 
-        public PairMappingAttribute(string from, string to, string separator = ">", string label = null) {
+        public PairMappingAttribute(string from, string to, string separator = ":", string label = null) {
             this.from = from;
             this.to = to;
             this.separator = separator;

@@ -49,7 +49,7 @@
                 float alpha = stampColor.a * _Intensity;
                 
                 // For accumulation buffer, we output:
-                // RGB = color (not pre-multiplied by alpha)
+                // RGB = color (pre-multiplied by alpha)
                 // A = opacity/coverage
                 return float4(stampColor.rgb * alpha, alpha);
             }
